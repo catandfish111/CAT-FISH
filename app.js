@@ -398,30 +398,31 @@
     '</svg>';
 
   var FISH_SVG =
-    '<svg viewBox="0 0 112 84" role="img" aria-label="可爱的小鱼">' +
-      '<g class="mst-tail" fill="#ff9db6">' +
-        '<path d="M75 42c10-13 21-20 35-25-5 10-7 17-7 25s2 15 7 25c-14-5-25-12-35-25Z"/>' +
+    '<svg viewBox="0 0 112 96" role="img" aria-label="可爱的小鱼">' +
+      '<g class="mst-tail" fill="#f3a7bd" stroke="#d97f9c" stroke-width="1.4" stroke-linejoin="round">' +
+        '<path d="M80 48c10-14 20-21 30-24-4 9-6 16-6 24s2 15 6 24c-10-3-20-10-30-24Z"/>' +
       '</g>' +
-      '<g class="mst-fin" fill="#ffc2ce">' +
-        '<path d="M43 19c4-11 13-16 24-17-2 10-6 17-14 23Z"/>' +
-        '<path d="M42 64c-3 10-10 15-20 17 2-9 6-15 13-20Z" opacity=".95"/>' +
-        '<path d="M46 16c-5-7-12-8-17-5 1 6 6 10 13 11Z"/>' +
+      '<g class="mst-fin" fill="#ffbdc8" stroke="#df8099" stroke-width="1.5" stroke-linejoin="round">' +
+        '<path d="M42 21c3-12 12-18 23-19-1 10-5 18-13 24Z"/>' +
+        '<path d="M45 73c-4 10-12 15-22 15 3-9 8-15 16-19Z"/>' +
+        '<path d="M17 48c-9-5-14-12-14-21 9 2 16 8 20 17Z"/>' +
       '</g>' +
-      '<ellipse cx="43" cy="43" rx="35" ry="28" fill="url(#gFish)"/>' +
-      '<ellipse cx="48" cy="52" rx="22" ry="13" fill="#ffd6ae" opacity=".24"/>' +
-      '<path d="M17 30c11-13 31-18 50-11-16 1-35 6-50 11Z" fill="#ffe6c9" opacity=".66"/>' +
-      '<path d="M2 44c8 1 15 7 19 15-7 3-14 2-20-2Z" fill="#ffb066" opacity=".9"/>' +
-      '<ellipse class="mst-eye" cx="24" cy="37" rx="9" ry="10" fill="#fff"/>' +
-      '<circle cx="22" cy="39" r="5" fill="#3b2416"/>' +
-      '<circle cx="20.3" cy="36.4" r="2" fill="#fff"/>' +
-      '<ellipse cx="36" cy="54" rx="7.5" ry="4.8" fill="#ff718e" opacity=".58"/>' +
-      '<ellipse cx="57" cy="53" rx="6.5" ry="4.2" fill="#ff718e" opacity=".4"/>' +
-      '<path d="M25 55c5 5 13 5 18 0" fill="none" stroke="#a53f1a" stroke-width="2.4" stroke-linecap="round"/>' +
-      '<path d="M47 32c4-3 8-3 11 0" fill="none" stroke="#d8583b" stroke-width="2" stroke-linecap="round" opacity=".72"/>' +
-      '<path d="M48 16c-3-4-2-8 2-10 1 4 3 6 7 7-2 3-5 4-9 3Z" fill="#ffec9f" opacity=".92"/>' +
-      '<g fill="none" stroke="#f2703f" stroke-width="2" stroke-linecap="round" opacity=".78">' +
-        '<path d="M66 25c0-4-3-7-7-8M70 29c1-4 4-6 8-6"/>' +
-      '</g>' +
+      '<ellipse cx="50" cy="51" rx="35" ry="31" fill="url(#gFish)" stroke="#dd784a" stroke-width="1.8"/>' +
+      '<ellipse cx="50" cy="59" rx="23" ry="16" fill="#ffe7c8" opacity=".33"/>' +
+      '<path d="M25 29c13-10 32-12 47-4-15 0-32 4-47 12Z" fill="#ffe8cf" opacity=".7"/>' +
+      '<ellipse class="mst-eye" cx="39.5" cy="47" rx="6.2" ry="7.2" fill="#fff"/>' +
+      '<ellipse class="mst-eye mst-eye-b" cx="60.5" cy="47" rx="6.2" ry="7.2" fill="#fff"/>' +
+      '<ellipse cx="40" cy="48" rx="3.5" ry="4.4" fill="#4a2b16"/>' +
+      '<ellipse cx="61" cy="48" rx="3.5" ry="4.4" fill="#4a2b16"/>' +
+      '<circle cx="38.8" cy="46.2" r="1.5" fill="#fff"/>' +
+      '<circle cx="59.8" cy="46.2" r="1.5" fill="#fff"/>' +
+      '<ellipse cx="28" cy="59" rx="7" ry="4.5" fill="#ff829b" opacity=".52"/>' +
+      '<ellipse cx="72" cy="59" rx="7" ry="4.5" fill="#ff829b" opacity=".52"/>' +
+      '<path d="M50 54 46.7 57.5h6.6Z" fill="#db6682"/>' +
+      '<path d="M44 61c2.2 4.2 9.8 4.2 12 0" fill="none" stroke="#7a3b35" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M47 37c2-2 4-2 6 0M59 37c2-2 4-2 6 0" fill="none" stroke="#c95c46" stroke-width="1.8" stroke-linecap="round" opacity=".7"/>' +
+      '<path d="M50 15c-4-5-3-10 2-13 1 5 4 8 9 9-2 4-6 5-11 4Z" fill="#ffe79a" stroke="#e5ad5b" stroke-width="1.2"/>' +
+      '<path d="M86 37c4-4 8-5 12-4M88 63c4 4 8 5 12 4" fill="none" stroke="#f7c17d" stroke-width="2" stroke-linecap="round" opacity=".85"/>' +
     '</svg>';
 
   var HEART_SVG = '<svg viewBox="0 0 32 32" role="img" aria-label="爱心"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>';
@@ -492,6 +493,66 @@
     if (r) fx.burstAt(r.left + r.width / 2, r.top + r.height / 2, kind, 12);
   }
 
+  var catSpeech = null;
+  var catSpeechTimer = 0;
+  var catSpeechOutTimer = 0;
+  function speakCat() {
+    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      var utterance = new window.SpeechSynthesisUtterance('有没有想我呀');
+      utterance.lang = 'zh-CN';
+      utterance.pitch = 1.35;
+      utterance.rate = 0.9;
+      utterance.volume = 0.85;
+      window.speechSynthesis.speak(utterance);
+    } catch (e) { /* 某些微信内置浏览器没有可用的语音引擎 */ }
+  }
+  function showCatSpeech(target) {
+    if (!target || !document.body) return;
+    if (!catSpeech) {
+      catSpeech = document.createElement('div');
+      catSpeech.className = 'cat-speech';
+      catSpeech.setAttribute('role', 'status');
+      catSpeech.setAttribute('aria-live', 'polite');
+      catSpeech.textContent = '有没有想我呀';
+      document.body.appendChild(catSpeech);
+    }
+    if (catSpeechTimer) clearTimeout(catSpeechTimer);
+    if (catSpeechOutTimer) clearTimeout(catSpeechOutTimer);
+    catSpeech.classList.remove('is-leaving', 'is-left');
+    catSpeech.classList.add('is-visible');
+    var rect = target.getBoundingClientRect ? target.getBoundingClientRect() : null;
+    if (!rect) return;
+    var gap = 10;
+    var bubbleWidth = Math.min(168, Math.max(132, window.innerWidth - 28));
+    var left = rect.right + gap;
+    if (left + bubbleWidth > window.innerWidth - 12) left = rect.left - bubbleWidth - gap;
+    var placedLeft = left < rect.left;
+    if (left < 12) {
+      left = clamp(rect.left + rect.width / 2 - bubbleWidth / 2, 12, window.innerWidth - bubbleWidth - 12);
+      placedLeft = false;
+    }
+    if (placedLeft) catSpeech.classList.add('is-left');
+    var top = rect.top + rect.height * 0.16;
+    top = clamp(top, 14, window.innerHeight - 58);
+    catSpeech.style.width = bubbleWidth + 'px';
+    catSpeech.style.left = left + 'px';
+    catSpeech.style.top = top + 'px';
+    catSpeechTimer = setTimeout(function () {
+      catSpeech.classList.remove('is-visible');
+      catSpeech.classList.add('is-leaving');
+      catSpeechOutTimer = setTimeout(function () {
+        if (catSpeech) catSpeech.classList.remove('is-leaving');
+      }, 420);
+    }, 2900);
+  }
+  function reactToCat(el) {
+    cheer(el, 'heart');
+    showCatSpeech(el);
+    speakCat();
+  }
+
   var mascotCat = $('mascotCat');
   var mascotFish = $('mascotFishEnvelope');
   var jar = null;
@@ -504,7 +565,7 @@
     var jarSvg = jar.querySelector ? jar.querySelector('[data-slot="jar"]') : null;
     if (jarSvg) jarSvg.innerHTML = JAR_SVG;
   }
-  if (mascotCat) mascotCat.addEventListener('click', function (e) { e.stopPropagation(); cheer(mascotCat, 'heart'); });
+  if (mascotCat) mascotCat.addEventListener('click', function (e) { e.stopPropagation(); reactToCat(mascotCat); });
   if (mascotFish) mascotFish.addEventListener('click', function (e) { e.stopPropagation(); cheer(mascotFish, 'bubble'); });
   if (jar) jar.addEventListener('click', function (e) { e.stopPropagation(); cheer(jar, 'heart'); });
 
@@ -546,7 +607,8 @@
     paperMascot.addEventListener('click', function () {
       var shown = paperMascot.querySelector ? paperMascot.querySelector('.in') : null;
       if (!shown) return;
-      cheer(shown, shown.getAttribute('data-kind') === 'fish' ? 'bubble' : 'heart');
+      if (shown.getAttribute('data-kind') === 'cat') reactToCat(shown);
+      else cheer(shown, 'bubble');
     });
   }
   /* 落款处的两个形象也可以点 */
@@ -555,7 +617,8 @@
     duo.addEventListener('click', function (e) {
       var t = e.target && e.target.closest ? e.target.closest('[data-slot]') : null;
       if (!t) return;
-      cheer(t, t.getAttribute('data-slot') === 'fish' ? 'bubble' : 'heart');
+      if (t.getAttribute('data-slot') === 'cat') reactToCat(t);
+      else cheer(t, 'bubble');
     });
   }
 

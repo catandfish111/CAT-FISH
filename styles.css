@@ -278,6 +278,37 @@ svg{display:block;}
 .mascot-fish .mst-tail{transform-box:fill-box;transform-origin:100% 50%;animation:tailWag 1.05s ease-in-out infinite;}
 .mascot-fish .mst-fin{transform-box:fill-box;transform-origin:50% 100%;animation:earFlick 2.2s ease-in-out infinite;}
 
+/* 小猫点下后出现的云朵对白 */
+.cat-speech{
+  position:fixed;z-index:45;
+  box-sizing:border-box;min-height:42px;padding:10px 15px;
+  display:flex;align-items:center;justify-content:center;
+  color:#7d3948;background:#fffafb;
+  border:1.5px solid rgba(224,117,143,.45);
+  border-radius:22px 22px 20px 24px;
+  box-shadow:0 10px 24px rgba(107,34,53,.18), 0 0 0 4px rgba(255,255,255,.5);
+  font-size:13px;line-height:1.35;letter-spacing:.08em;
+  white-space:nowrap;pointer-events:none;
+  opacity:0;visibility:hidden;translate:0 7px;scale:.86;
+  transition:opacity .28s ease,translate .36s cubic-bezier(.2,.9,.25,1),scale .36s cubic-bezier(.2,.9,.25,1),visibility 0s linear .36s;
+}
+.cat-speech::before,.cat-speech::after{
+  content:"";position:absolute;border-radius:50%;background:#fffafb;
+  border-top:1.5px solid rgba(224,117,143,.38);
+}
+.cat-speech::before{width:17px;height:17px;left:14px;bottom:-9px;}
+.cat-speech::after{width:9px;height:9px;left:6px;bottom:-15px;}
+.cat-speech.is-left::before{left:auto;right:14px;}
+.cat-speech.is-left::after{left:auto;right:6px;}
+.cat-speech.is-visible{
+  opacity:1;visibility:visible;translate:0 0;scale:1;
+  transition-delay:0s;
+}
+.cat-speech.is-leaving{
+  opacity:0;visibility:hidden;translate:0 -5px;scale:.92;
+  transition-delay:0s;
+}
+
 /* 信封左下角探出头的小猫 */
 .mascot-cat{
   left:-2%;bottom:-4%;width:112px;height:96px;
@@ -358,12 +389,16 @@ svg{display:block;}
 
 /* 小屏时把形象缩小一点，别挡住信封 */
 @media (max-width:380px){
-  .mascot-fish{width:86px;height:66px;right:-6%;}
+  .mascot-fish{width:90px;height:78px;right:-6%;}
   .mascot-cat{width:94px;height:80px;left:-4%;}
   .mascot-jar{width:62px;height:66px;}
   .paper-mascot{height:48px;}
   .paper-mascot .pm-cat{width:52px;height:45px;}
   .paper-mascot .pm-fish{width:54px;height:40px;}
+}
+
+@media (max-width:380px){
+  .cat-speech{font-size:12px;letter-spacing:.05em;padding-inline:12px;}
 }
 
 .veil{
