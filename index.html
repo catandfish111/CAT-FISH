@@ -37,6 +37,12 @@
   <section class="scene scene-envelope" id="scene-envelope">
     <p class="intro-line" id="introLine">写给你的一封信</p>
 
+    <!-- 卡通小鱼（信封右上，会摆尾吐泡） -->
+    <div class="mascot mascot-fish" id="mascotFishEnvelope" aria-hidden="true">
+      <span class="bubbles" data-slot="bubbles"></span>
+      <div class="swim" data-slot="fish"></div>
+    </div>
+
     <div class="env-wrap" id="envWrap">
       <div class="env" id="env" role="img" aria-label="一封信">
         <div class="env-back"></div>
@@ -54,10 +60,15 @@
         </div>
         <button class="env-seal" id="envSeal" type="button" aria-label="打开信封">
           <span class="seal-glow" aria-hidden="true"></span>
-          <span class="seal-heart" aria-hidden="true">
+          <span class="seal-icon" id="sealIcon" aria-hidden="true">
             <svg viewBox="0 0 32 32"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>
           </span>
         </button>
+      </div>
+
+      <!-- 卡通小猫（从信封左下探出头，会眨眼摇尾） -->
+      <div class="mascot mascot-cat" id="mascotCat" aria-hidden="true">
+        <div class="peek" data-slot="cat"></div>
       </div>
     </div>
 
@@ -75,15 +86,19 @@
       </button>
     </header>
     <div class="paper-scroll" id="paperScroll">
+      <!-- 每一幕的小陪读：小猫和小鱼轮流出场，点一下有反应 -->
+      <div class="paper-mascot" id="paperMascot" aria-hidden="true">
+        <span class="pm-fish" data-slot="fish"></span>
+        <span class="pm-heart" data-slot="heart"></span>
+        <span class="pm-cat" data-slot="cat"></span>
+      </div>
       <h1 class="paper-title" id="letterTitle"></h1>
       <div class="paper-body" id="letterBody"></div>
       <div class="video-slot">
         <div class="video-frame">
           <video id="letterVideo" playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false" preload="metadata" muted loop></video>
           <div class="video-empty" id="videoEmpty">
-            <span class="ve-heart" aria-hidden="true">
-              <svg viewBox="0 0 32 32"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>
-            </span>
+            <span class="ve-mascot" data-slot="fish" aria-hidden="true"></span>
             <p class="ve-title" id="videoEmptyTitle">视频还在路上</p>
             <p class="ve-sub" id="videoEmptySub">把文件放进 assets 文件夹就会自动播放</p>
             <button class="ve-retry" id="videoRetry" type="button">再看一次</button>
@@ -103,7 +118,11 @@
       <div class="paper-end" id="letterEnd">
         <p class="sign" id="letterSign"></p>
         <div class="big-heart" id="bigHeart">
-          <svg viewBox="0 0 32 32"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>
+          <div class="duo" aria-hidden="true">
+            <span class="duo-cat" data-slot="cat"></span>
+            <span class="duo-heart" data-slot="heart"></span>
+            <span class="duo-fish" data-slot="fish"></span>
+          </div>
           <span class="tap-hint-word">轻触重新看一遍</span>
         </div>
       </div>
