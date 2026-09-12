@@ -1,0 +1,15 @@
+# 凭据文件：绝对不要提交
+git.txt
+
+# 系统杂物
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+
+# 自检脚本（不影响站点，想一起上传就把下面这行删掉）
+tests/
