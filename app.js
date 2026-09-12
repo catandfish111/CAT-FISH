@@ -672,16 +672,6 @@
     return 1;
   }
 
-  /* 让光标始终跟着视线走（每 220ms 最多滚一次，避免打字慢时抖） */
-  var lastFollow = 0;
-  function followCaret(now, caret, opt) {
-    if (opt.follow === false || !caret.parentNode) return;
-    if (now - lastFollow < 220) return;
-    lastFollow = now;
-    try { caret.scrollIntoView({ block: 'end', behavior: REDUCED ? 'auto' : 'smooth' }); }
-    catch (e) { try { caret.scrollIntoView(false); } catch (e2) { /* 忽略 */ } }
-  }
-
   function typeInto(el, text, opt) {
     opt = opt || {};
     var cps = opt.cps || 15;                     /* 每秒大约打几个字 */
@@ -741,7 +731,6 @@
         }
         if (moved) {
           sound.blip();
-          followCaret(t, caret, opt);            /* 打字慢的时候不用每帧都滚 */
         }
         if (i >= units.length) { finish(); return; }
         requestAnimationFrame(frame);
@@ -859,14 +848,6 @@
     vSound.innerHTML = MUTE_SVG + WAVE_SVG;
     frame.appendChild(vSound);
 
-    var empty = document.createElement('div');
-    empty.className = 'video-empty';
-    empty.hidden = true;
-    empty.innerHTML = '<span class="ve-heart">' + HEART_SVG + '</span>' +
-      '<p class="ve-title"></p><p class="ve-sub"></p>' +
-      '<button class="ve-retry" type="button">再看一次</button>';
-    frame.appendChild(empty);
-
     var cap = document.createElement('p');
     cap.className = 'video-cap';
     cap.textContent = stage.caption || '';
@@ -876,10 +857,7 @@
     wrap.appendChild(cap);
 
     return {
-      el: wrap, video: v, play: play, sound: vSound, empty: empty,
-      veTitle: empty.querySelector('.ve-title'),
-      veSub: empty.querySelector('.ve-sub'),
-      retry: empty.querySelector('.ve-retry')
+      el: wrap, video: v, play: play, sound: vSound
     };
   }
 
@@ -901,15 +879,7 @@
       if (timer) { clearInterval(timer); timer = 0; }
       resolveFn(true);
     }
-    function showTip() {
-      if (stopped) return;
-      c.veTitle.textContent = '视频还没放进来';
-      c.veSub.textContent = '把 ' + stage.video + ' 放进 assets 文件夹，刷新就能看到啦';
-      c.play.hidden = true;
-      c.sound.style.display = 'none';
-      c.empty.hidden = false;
-    }
-    function markReady() { ready = true; c.empty.hidden = true; }
+    function markReady() { ready = true; }
     function attempt() {
       if (done || stopped || !ready) return;
       c.play.hidden = true;
@@ -921,7 +891,12 @@
     v.addEventListener('loadeddata', markReady);
     v.addEventListener('canplay', markReady);
     v.addEventListener('playing', markReady);
-    v.addEventListener('error', function () { if (!ready) { showTip(); finish(); } });
+    v.addEventListener('error', function () {
+      if (!ready) {
+        c.el.hidden = true;
+        finish();
+      }
+    });
     v.addEventListener('ended', function () { if (!v.loop) finish(); });
 
     c.play.addEventListener('click', attempt);
@@ -934,18 +909,6 @@
       if (v.paused) attempt();
       else { try { v.pause(); } catch (e) { /* 忽略 */ } c.play.hidden = false; }
     });
-    c.retry.addEventListener('click', function () {
-      /* 重试只是再放一次，不推进剧情；想往下看请点「跳过视频」 */
-      if (tk !== TOKEN) return;
-      c.empty.hidden = true;
-      c.sound.style.display = '';
-      ready = false; done = false; stopped = false;
-      p = new Promise(function (res) { resolveFn = res; });
-      try { v.load(); } catch (e) { /* 忽略 */ }
-      startPoll();
-      setTimeout(attempt, 400);
-    });
-
     function startPoll() {
       if (timer) return;
       var ticks = 0;
@@ -953,15 +916,18 @@
         ticks += 1;
         if (done || stopped) { clearInterval(timer); timer = 0; return; }
         if (!ready && (v.readyState >= 3 || v.videoWidth)) markReady();
-        if (!ready && ticks > 6) { showTip(); finish(); return; }
         if (ready && v.paused && !v.ended) attempt();
       }, 450);
     }
 
     try { v.load(); } catch (e) { /* 忽略 */ }
     startPoll();
-    c.sound.style.display = '';
+    c.sound.style.display = 'grid';
     attempt();
+
+    /* 视频只在用户点击互动按钮后出现，此时把视线带到播放器。 */
+    try { c.el.scrollIntoView({ block: 'center', behavior: REDUCED ? 'auto' : 'smooth' }); }
+    catch (e) { /* 忽略 */ }
 
     return {
       get done() { return p; },
@@ -1043,87 +1009,89 @@
     var tk = TOKEN;
     var i = 0;
 
+    function waitForAction(label, fn) {
+      if (tk !== TOKEN || !running) return;
+      setSkip(true, label);
+      step = {
+        skip: function () {
+          if (tk !== TOKEN || !running) return;
+          step = null;
+          setSkip(false);
+          fn();
+        }
+      };
+    }
+
     function nextStage() {
       if (tk !== TOKEN || !running) return;
       if (i >= stages.length) { finale(tk); return; }
 
       var stage = stages[i];
       i += 1;
+      var hasVideo = !!(stage.video || '').trim();
       setStageHead(i - 1, stage);
       unmountVideo();
       elTitle.innerHTML = '';
       elBody.innerHTML = '';
       elBody2.innerHTML = '';
+      /* 只在用户点击继续后切换到新的一幕，切换时从这一幕顶部开始。 */
+      paperScroll.scrollTop = 0;
       setSkip(false);
       step = null;
       /* 换一位小陪读出场 */
       var mascotReady = showMascot(stage.mascot || pickMascot(i - 1));
-      /* 每一幕都从头看起 */
-      try { elTitle.scrollIntoView({ block: 'start', behavior: REDUCED ? 'auto' : 'smooth' }); }
-      catch (e) { paperScroll.scrollTop = 0; }
-
-      var hasVideo = !!(stage.video || '').trim();
 
       /* 标题先打出来（不阻塞正文） */
       var titleText = stage.title || (i === 1 ? '写给最特别的你' : '');
       var titleSeq = titleText ? typeSeq([titleText], elTitle, tk) : Promise.resolve(true);
+      var bodySeq = typeSeq(stage.open || [], elBody, tk);
 
-      typeSeq(stage.open || [], elBody, tk).then(function (ok) {
-        if (!ok || tk !== TOKEN || !running) return false;
-        /* 等标题和小陪读都就位，再往下走 */
-        return Promise.all([titleSeq, mascotReady]).then(waitText).then(function () {
-          if (tk !== TOKEN || !running) return false;
-          if (!hasVideo) return afterVideo().then(function () { return true; });
-          if (CFG.video.mode === 'cine') {
-            setSkip(true, '跳过视频');
-            return playCine(stage, tk).then(function () {
-              if (tk !== TOKEN) return false;
-              return afterVideo().then(function () { return true; });
-            });
-          }
-          setSkip(true, '跳过视频');
-          var ctl = mountVideo(stage, tk);
-          cardCtl = ctl;
-          step = { skip: function () { ctl.skip(); } };
-          return ctl.done.then(function () {
-            if (tk !== TOKEN) return false;
-            step = null;
-            return afterVideo().then(function () { return true; });
-          });
+      Promise.all([titleSeq, bodySeq, mascotReady]).then(function (result) {
+        if (result.some(function (ok) { return ok === false; }) || tk !== TOKEN || !running) return;
+        waitForAction(hasVideo ? (stage.action || '打开这段影像') : '继续', function () {
+          if (hasVideo) revealVideo(stage);
+          else revealClose(stage);
         });
-      }).then(function (ok) {
-        if (ok === false) return false;
-        /* 给点时间读完，再翻到下一幕 */
-        return later(CFG.video.closePause || 1400, tk);
-      }).then(function (ok) {
-        if (!ok) return;
-        nextStage();
       }).catch(function (e) {
         if (window.console && console.warn) console.warn('流程中断：', e);
       });
     }
 
-    /* 等标题和正文都打完（它们可能同时在打） */
-    function waitText() {
-      return new Promise(function (res) {
-        (function check() {
-          if (!typingEls.length || !running || tk !== TOKEN) { res(); return; }
-          setTimeout(check, 90);
-        })();
+    function revealVideo(stage) {
+      if (tk !== TOKEN || !running) return;
+      setSkip(false);
+      if (CFG.video.mode === 'cine') {
+        setSkip(true, '跳过视频');
+        playCine(stage, tk).then(function () {
+          if (tk === TOKEN && running) revealClose(stage);
+        });
+        return;
+      }
+      setSkip(true, '跳过视频');
+      var ctl = mountVideo(stage, tk);
+      cardCtl = ctl;
+      step = { skip: function () { ctl.skip(); } };
+      ctl.done.then(function () {
+        if (tk !== TOKEN || !running) return;
+        step = null;
+        cardCtl = null;
+        revealClose(stage);
       });
     }
 
-    /* 视频之后那段话：先打完，再停留一会儿 */
-    function afterVideo() {
-      var st = stages[i - 1] || {};
-      var list = st.close || [];
-      if (!list.length) { setSkip(false); step = null; return Promise.resolve(); }
-      setSkip(true, '跳过');
+    /* 互动后显示视频后的文字，再由下一次互动进入下一幕。 */
+    function revealClose(stage) {
+      if (tk !== TOKEN || !running) return;
+      var list = stage.close || [];
+      if (!list.length) {
+        waitForAction('继续', nextStage);
+        return;
+      }
+      setSkip(false);
+      step = null;
       return typeSeq(list, elBody2, tk).then(function (ok) {
-        step = null;
-        if (!ok || tk !== TOKEN) return;
-        setSkip(false);
-        return later(CFG.video.closePause || 1400, tk);
+        if (!ok || tk !== TOKEN || !running) return;
+        waitForAction('继续', nextStage);
       });
     }
 

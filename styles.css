@@ -480,27 +480,15 @@ svg{display:block;}
 .video-slot{margin:18px 0 20px;}
 .video-frame{
   position:relative;
+  width:min(100%,320px);
+  margin-inline:auto;
   border-radius:14px;overflow:hidden;
   background:#1b0b11;
-  aspect-ratio:16/9;
+  /* video1.mp4 is 1080x1442, so keep its portrait composition intact. */
+  aspect-ratio:1080/1442;
   box-shadow:0 16px 34px -18px rgba(80,10,30,.8), 0 0 0 1px rgba(201,24,74,.12);
 }
-.video-frame video{width:100%;height:100%;object-fit:cover;display:block;background:#1b0b11;}
-.video-empty{
-  position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:6px;
-  text-align:center;padding:16px;
-  background:linear-gradient(150deg,#3a1620,#22090f);
-  color:#ffd9e1;
-}
-.video-empty .ve-mascot{width:58px;height:46px;animation:mstBob 2.6s ease-in-out infinite;}
-.video-empty .ve-mascot svg{width:100%;height:100%;}
-.video-empty .ve-mascot .mst-tail{transform-box:fill-box;transform-origin:100% 50%;animation:tailWag 1.1s ease-in-out infinite;}
-.ve-title{margin:2px 0 0;font-size:13px;letter-spacing:.12em;}
-.ve-sub{margin:0;font-size:11px;letter-spacing:.06em;opacity:.62;line-height:1.7;}
-.ve-retry{
-  margin-top:6px;padding:6px 14px;border-radius:999px;font-size:11.5px;letter-spacing:.14em;
-  background:rgba(255,143,163,.18);border:1px solid rgba(255,143,163,.4);color:#ffe4ea;
-}
+.video-frame video{width:100%;height:100%;object-fit:contain;display:block;background:#1b0b11;}
 .video-play{
   position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;
   display:grid;place-items:center;border-radius:50%;
@@ -512,7 +500,7 @@ svg{display:block;}
 .vp-ring{position:absolute;inset:-9px;border-radius:50%;border:1px solid rgba(255,180,195,.6);}
 .video-sound{
   position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:50%;
-  display:none;place-items:center;
+  display:grid;place-items:center;
   background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.22);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
 }

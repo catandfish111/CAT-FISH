@@ -62,6 +62,7 @@ window.LOVE_CONFIG = {
       ],
       video: 'assets/video1.mp4',   // ← 你的视频（也可以填 mp4 / webm 链接）
       poster: '',                    // ← 视频封面图，可留空
+      action: '打开这段影像',          // ← 先完成这一幕的文字，点击后才显示视频
       caption: '那天偷偷录了一小段，只留给你看。',
       close: [
         '其实那天我紧张得手心全是汗，',
