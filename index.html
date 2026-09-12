@@ -80,19 +80,18 @@
     <header class="paper-head">
       <span class="stage-tag"><b id="stageNo">01</b><i>/</i><span id="stageTotal">04</span></span>
       <span class="stage-name" id="stageName">启封</span>
-      <button class="paper-skip" id="paperSkip" type="button" hidden>跳过</button>
       <button class="paper-close" id="paperClose" type="button" aria-label="收好这封信">
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </header>
     <div class="paper-scroll" id="paperScroll">
+      <h1 class="paper-title" id="letterTitle"></h1>
       <!-- 每一幕的小陪读：小猫和小鱼轮流出场，点一下有反应 -->
       <div class="paper-mascot" id="paperMascot" aria-hidden="true">
         <span class="pm-fish" data-slot="fish"></span>
         <span class="pm-heart" data-slot="heart"></span>
         <span class="pm-cat" data-slot="cat"></span>
       </div>
-      <h1 class="paper-title" id="letterTitle"></h1>
       <div class="paper-body" id="letterBody"></div>
       <div class="paper-body paper-body-2" id="letterBody2"></div>
       <div class="paper-end" id="letterEnd">
@@ -106,6 +105,9 @@
           <span class="tap-hint-word">轻触重新看一遍</span>
         </div>
       </div>
+    </div>
+    <div class="paper-actions">
+      <button class="paper-skip" id="paperSkip" type="button" hidden>继续</button>
     </div>
   </section>
 

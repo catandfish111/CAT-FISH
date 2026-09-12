@@ -925,10 +925,6 @@
     c.sound.style.display = 'grid';
     attempt();
 
-    /* 视频只在用户点击互动按钮后出现，此时把视线带到播放器。 */
-    try { c.el.scrollIntoView({ block: 'center', behavior: REDUCED ? 'auto' : 'smooth' }); }
-    catch (e) { /* 忽略 */ }
-
     return {
       get done() { return p; },
       skip: function () {
@@ -1024,37 +1020,48 @@
 
     function nextStage() {
       if (tk !== TOKEN || !running) return;
-      if (i >= stages.length) { finale(tk); return; }
+      var shouldTurn = i > 0;
 
-      var stage = stages[i];
-      i += 1;
-      var hasVideo = !!(stage.video || '').trim();
-      setStageHead(i - 1, stage);
-      unmountVideo();
-      elTitle.innerHTML = '';
-      elBody.innerHTML = '';
-      elBody2.innerHTML = '';
-      /* 只在用户点击继续后切换到新的一幕，切换时从这一幕顶部开始。 */
-      paperScroll.scrollTop = 0;
-      setSkip(false);
-      step = null;
-      /* 换一位小陪读出场 */
-      var mascotReady = showMascot(stage.mascot || pickMascot(i - 1));
+      function render() {
+        if (tk !== TOKEN || !running) return;
+        paperScroll.classList.remove('page-turning');
+        if (i >= stages.length) { finale(tk); return; }
 
-      /* 标题先打出来（不阻塞正文） */
-      var titleText = stage.title || (i === 1 ? '写给最特别的你' : '');
-      var titleSeq = titleText ? typeSeq([titleText], elTitle, tk) : Promise.resolve(true);
-      var bodySeq = typeSeq(stage.open || [], elBody, tk);
-
-      Promise.all([titleSeq, bodySeq, mascotReady]).then(function (result) {
-        if (result.some(function (ok) { return ok === false; }) || tk !== TOKEN || !running) return;
-        waitForAction(hasVideo ? (stage.action || '打开这段影像') : '继续', function () {
-          if (hasVideo) revealVideo(stage);
-          else revealClose(stage);
+        var stage = stages[i];
+        i += 1;
+        var hasVideo = !!(stage.video || '').trim();
+        setStageHead(i - 1, stage);
+        unmountVideo();
+        /* 每页都有自己的打字缓存，标题不会带入上一页的内容。 */
+        [elTitle, elBody, elBody2].forEach(function (el) {
+          el._typed = '';
+          el.innerHTML = '';
         });
-      }).catch(function (e) {
-        if (window.console && console.warn) console.warn('流程中断：', e);
-      });
+        paperScroll.scrollTop = 0;
+        setSkip(false);
+        step = null;
+        var mascotReady = showMascot(stage.mascot || pickMascot(i - 1));
+        var titleText = stage.title || (i === 1 ? '写给最特别的你' : '');
+        var titleSeq = titleText ? typeSeq([titleText], elTitle, tk) : Promise.resolve(true);
+        var bodySeq = typeSeq(stage.open || [], elBody, tk);
+
+        Promise.all([titleSeq, bodySeq, mascotReady]).then(function (result) {
+          if (result.some(function (ok) { return ok === false; }) || tk !== TOKEN || !running) return;
+          waitForAction(hasVideo ? (stage.action || '打开这段影像') : '继续', function () {
+            if (hasVideo) revealVideo(stage);
+            else revealClose(stage);
+          });
+        }).catch(function (e) {
+          if (window.console && console.warn) console.warn('流程中断：', e);
+        });
+      }
+
+      if (!shouldTurn) {
+        render();
+        return;
+      }
+      paperScroll.classList.add('page-turning');
+      setTimeout(render, REDUCED ? 30 : 260);
     }
 
     function revealVideo(stage) {
