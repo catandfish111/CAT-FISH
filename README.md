@@ -134,19 +134,59 @@ window.LOVE_CONFIG = {
 
 ## 3. 放视频
 
-把视频文件丢进 `assets/` 文件夹，比如 `assets/video1.mp4`，
-再在 `config.js` 里把 `video: 'assets/video1.mp4'` 写上（路径要和文件名完全一致，注意大小写）。
+**默认配置已经指向 `assets/video1.mp4`，所以你只要把视频命名为 `video1.mp4` 放进 `assets/` 文件夹，什么都不用改，刷新就能看到。**
 
-想让某个视频走**全屏**：把 `video.mode` 改成 `'cine'`，视频会占满整个屏幕播放，右上角有「跳过」。
+想用别的名字（比如 `our-day.mp4`），就把 `config.js` 里那一行改成一样的路径：
 
-**视频规格建议**（微信里播放最稳）：
+```js
+video: 'assets/our-day.mp4',   // ← 路径要和文件名完全一致，注意大小写
+```
+
+第二个视频（第五幕「第二幕」）：把文件放进来（比如 `video2.mp4`），
+再把那一幕的 `video` 从 `''` 改成 `'assets/video2.mp4'`；不填就自动跳过这一幕的视频。
+
+想让视频走**全屏**：把 `video.mode` 改成 `'cine'`，会占满整个屏幕播放，右上角有「跳过」。
+
+### 命名规则
+
+| 要 | 不要 |
+| --- | --- |
+| 小写英文 + 数字 + 连字符，如 `video1.mp4`、`our-day.mp4` | 中文名、空格、括号，如 `我们的第一天 (1).mp4` |
+| 真的是 `.mp4` 文件 | 把 `.mov`、`.avi` 直接改后缀成 `.mp4` |
+| 换视频时换个新名字，如 `video1b.mp4` | 同名覆盖（微信会一直用缓存里的旧视频） |
+
+### 视频规格（微信里播放最稳）
 
 | 项目 | 建议 |
 | --- | --- |
-| 格式 | `.mp4`（H.264 视频 + AAC 音频），兼容性最好 |
+| 编码 | MP4（H.264 视频 + AAC 音频）；**不要用 HEVC/H.265**，微信常常不认 |
 | 分辨率 | 1080p 以内，竖屏 1080×1920 也行（会自动等比放进框里） |
-| 大小 | 单个 50MB 以内；微信里太大加载慢，容易卡在转圈 |
-| 命名 | 用英文/数字，别用中文和空格，省得路径出问题 |
+| 时长 | 15 秒 ~ 1 分钟最好 |
+| 大小 | 单个 50MB 以内最好（GitHub 单文件上限 100MB，超了传不上去） |
+| 其他 | 片头别太长，微信里自动播放是静音的，最好前几秒就有画面 |
+
+转换/压缩用 ffmpeg 一行命令（`-movflags +faststart` 很关键，让微信能边下边播、不用先转圈）：
+
+```
+ffmpeg -i 原视频.mov -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 128k -movflags +faststart video1.mp4
+```
+
+### 怎么传上去
+
+**网页上传**（不用装任何东西，适合 50MB 以内）：
+1. 打开 <https://github.com/catandfish111/CAT-FISH/tree/main/assets>
+2. 右上角 **Add file → Upload files**，把 `video1.mp4` 拖进去
+3. 下面点 **Commit changes**
+4. 等 30~60 秒，刷新站点就能看到（GitHub Pages 会自动重新发布）
+
+**git 命令**（文件大或要经常换）：
+```
+git clone https://github.com/catandfish111/CAT-FISH.git
+# 把 video1.mp4 拷进 assets/ 里
+git add assets/video1.mp4
+git commit -m "加入第一段视频"
+git push
+```
 
 > 还没放视频时不会出丑：信纸里会显示一张写着「视频还没放进来」的提示卡，旁边有「再看一次」按钮，
 > 点「跳过视频」可以直接往下看。
