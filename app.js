@@ -12,6 +12,7 @@
     ending: { sign: '永远站在你这边的人', replay: '轻触重新看一遍' },
     video: { mode: 'inline', muted: true, loop: false, rate: 0.92, closePause: 1400 },
     typing: { speed: 15, titleSpeed: 11 },
+    mascots: { enabled: true, cat: true, fish: true, jar: true, seal: 'fish' },
     fx: { particles: true, sealSound: true, heartCursor: true }
   };
 
@@ -148,73 +149,169 @@
       U = clamp(Math.min(W, H) / 100, 2.6, 6);
     }
 
-    function spawn() {
+    /* ---- 各种小图形 ---- */
+    function pawPath(c, s) {
+      c.beginPath();
+      c.ellipse(0, 0.16 * s, 0.40 * s, 0.31 * s, 0, 0, Math.PI * 2);
+      for (var k = 0; k < 4; k++) {
+        var a = -Math.PI * 0.78 + k * 0.42;
+        c.moveTo(Math.cos(a) * 0.44 * s, Math.sin(a) * 0.44 * s);
+        c.ellipse(Math.cos(a) * 0.44 * s, Math.sin(a) * 0.44 * s, 0.15 * s, 0.18 * s, 0, 0, Math.PI * 2);
+      }
+      c.closePath();
+    }
+    function starPath(c, s) {
+      c.beginPath();
+      c.moveTo(0, -s);
+      c.bezierCurveTo(0.14 * s, -0.2 * s, 0.2 * s, -0.14 * s, s, 0);
+      c.bezierCurveTo(0.2 * s, 0.14 * s, 0.14 * s, 0.2 * s, 0, s);
+      c.bezierCurveTo(-0.14 * s, 0.2 * s, -0.2 * s, 0.14 * s, -s, 0);
+      c.bezierCurveTo(-0.2 * s, -0.14 * s, -0.14 * s, -0.2 * s, 0, -s);
+      c.closePath();
+    }
+
+    var KIND = {
+      bubble: { r: 5.5, a: 0.34, col: 'rgba(255,214,224,.9)' },
+      paw: { r: 6, a: 0.20, col: 'rgba(255,175,195,.85)' },
+      spark: { r: 5, a: 0.55 },
+      heart: { r: 6.5, a: 0.22 }
+    };
+
+    function spawn(kind) {
+      kind = kind || 'heart';
+      var k = KIND[kind] || KIND.heart;
       items.push({
+        kind: kind,
         x: Math.random() * W,
         y: H + 20 + Math.random() * 40,
         vy: -(6 + Math.random() * 14) * (U / 4),
         vx: (Math.random() - 0.5) * 6 * (U / 4),
-        s: (3.5 + Math.random() * 6) * (U / 4),
+        s: k.r * (U / 4),
         rot: (Math.random() - 0.5) * 0.7,
         vr: (Math.random() - 0.5) * 0.35,
-        a: 0.10 + Math.random() * 0.26,
+        a: k.a,
+        col: k.col,
         hue: 338 + Math.random() * 24,
+        life: 1,
         ph: Math.random() * Math.PI * 2
       });
     }
 
-    function burst(n) {
+    /* 从屏幕上方落下来的爱心雨 */
+    function rainHearts(n) {
       if (REDUCED) return;
-      var cx = W / 2, cy = H * 0.54;
       for (var i = 0; i < n; i++) {
-        var ang = (Math.PI * 2 * i) / n + Math.random() * 0.4;
-        var sp = (2.2 + Math.random() * 3.6) * U * 0.8;
         bursts.push({
-          x: cx + (Math.random() - 0.5) * 30,
-          y: cy + (Math.random() - 0.5) * 30,
-          vx: Math.cos(ang) * sp,
-          vy: Math.sin(ang) * sp - 1.2 * U,
+          kind: Math.random() < 0.34 ? 'bubble' : 'heart',
+          x: Math.random() * W,
+          y: -30 - Math.random() * H * 0.5,
+          vx: (Math.random() - 0.5) * 16,
+          vy: 26 + Math.random() * 40,
           s: (4 + Math.random() * 8) * (U / 4),
-          life: 1, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
-          hue: 336 + Math.random() * 28
+          rot: Math.random() * 6, vr: (Math.random() - 0.5) * 1.2,
+          life: 1, decay: 0.19,
+          hue: 336 + Math.random() * 30
         });
       }
       start();
     }
 
+    /* 从屏幕下方冒上来的一簇（彩蛋/结尾用） */
+    function confetti(n) {
+      if (REDUCED) return;
+      var kinds = ['heart', 'bubble', 'spark', 'paw'];
+      for (var i = 0; i < n; i++) {
+        var ang = -Math.PI * 0.5 + (Math.random() - 0.5) * 2.1;
+        var sp = (2.2 + Math.random() * 4.4) * U * 0.8;
+        bursts.push({
+          kind: kinds[(Math.random() * kinds.length) | 0],
+          x: W * 0.5 + (Math.random() - 0.5) * W * 0.5,
+          y: H * 0.98 + Math.random() * 30,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp,
+          s: (4 + Math.random() * 8) * (U / 4),
+          rot: Math.random() * 6, vr: (Math.random() - 0.5) * 3,
+          life: 1, decay: 0.40,
+          hue: 330 + Math.random() * 34
+        });
+      }
+      start();
+    }
+
+    /* 从某一点炸开（点小猫/小鱼时用） */
+    function burstAt(px, py, kind, n) {
+      if (REDUCED) return;
+      kind = kind || 'heart';
+      for (var i = 0; i < (n || 10); i++) {
+        var ang = Math.random() * Math.PI * 2;
+        var sp = (1.6 + Math.random() * 3.4) * U * 0.8;
+        bursts.push({
+          kind: kind,
+          x: px, y: py,
+          vx: Math.cos(ang) * sp,
+          vy: Math.sin(ang) * sp - 1.4 * U,
+          s: (4 + Math.random() * 7) * (U / 4),
+          rot: Math.random() * 6, vr: (Math.random() - 0.5) * 2.4,
+          life: 1, decay: 0.42,
+          hue: 332 + Math.random() * 28
+        });
+      }
+      start();
+    }
+
+    function burst(n) { burstAt(W / 2, H * 0.54, 'heart', n); }
+
+    function drawOne(p, rising) {
+      var k = KIND[p.kind] || KIND.heart;
+      ctx.save();
+      ctx.globalAlpha = clamp(p.life, 0, 1) * (rising ? (p.a || k.a) : 0.88);
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.col || ('hsl(' + p.hue + ',92%,66%)');
+      var s = p.s * (rising ? 1 : (0.6 + p.life * 0.6));
+      if (p.kind === 'bubble') {
+        ctx.beginPath();
+        ctx.arc(0, 0, s * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha *= 0.75;
+        ctx.fillStyle = 'rgba(255,255,255,.9)';
+        ctx.beginPath();
+        ctx.arc(-s * 0.2, -s * 0.22, s * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.kind === 'paw') {
+        pawPath(ctx, s);
+        ctx.fill();
+      } else if (p.kind === 'spark') {
+        ctx.fillStyle = 'hsl(' + (p.hue || 340) + ',96%,78%)';
+        starPath(ctx, s);
+        ctx.fill();
+      } else {
+        heartPath(ctx, s);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     function draw(list, dt) {
       for (var i = list.length - 1; i >= 0; i--) {
         var p = list[i];
-        if (p.life !== undefined) {
-          p.life -= dt * 0.36;
-          p.vy += 26 * dt;
-          p.vx *= 0.988;
+        if (list === bursts) {
+          p.life -= dt * (p.decay || 0.40);
+          p.vy += 22 * dt;
+          p.vx *= 0.99;
           p.x += p.vx * dt;
           p.y += p.vy * dt;
           p.rot += p.vr * dt;
-          if (p.life <= 0) { list.splice(i, 1); continue; }
-          ctx.save();
-          ctx.globalAlpha = clamp(p.life, 0, 1) * 0.85;
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.rot);
-          ctx.fillStyle = 'hsl(' + p.hue + ',92%,66%)';
-          heartPath(ctx, p.s * (0.6 + p.life * 0.6));
-          ctx.fill();
-          ctx.restore();
+          if (p.life <= 0 || p.y > H + 90) { list.splice(i, 1); continue; }
+          drawOne(p, false);
         } else {
           p.ph += dt * 1.4;
           p.y += p.vy * dt;
           p.x += (p.vx + Math.sin(p.ph) * 5) * dt;
           p.rot += p.vr * dt;
+          if (p.kind === 'bubble') p.x += Math.sin(p.ph * 2.4) * 12 * dt;
           if (p.y < -60 || p.x < -70 || p.x > W + 70) { list.splice(i, 1); continue; }
-          ctx.save();
-          ctx.globalAlpha = p.a;
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.rot);
-          ctx.fillStyle = 'hsl(' + p.hue + ',88%,72%)';
-          heartPath(ctx, p.s);
-          ctx.fill();
-          ctx.restore();
+          drawOne(p, true);
         }
       }
     }
@@ -228,7 +325,15 @@
       ctx.clearRect(0, 0, W, H);
       if (CFG.fx.particles && !REDUCED) {
         acc += dt;
-        if (acc > 0.42 && items.length < 34) { acc = 0; spawn(); }
+        if (acc > 0.34 && items.length < 46) {
+          acc = 0;
+          var r = Math.random();
+          /* 水里的小鱼会吐泡，小猫偶尔留下爪印 */
+          if (r < 0.22 && CFG.mascots.fish) spawn('bubble');
+          else if (r < 0.30 && CFG.mascots.cat) spawn('paw');
+          else if (r < 0.36) spawn('spark');
+          else spawn('heart');
+        }
       }
       draw(items, dt);
       draw(bursts, dt);
@@ -245,10 +350,227 @@
     });
     if (CFG.fx.particles && !REDUCED) { for (var i = 0; i < 16; i++) spawn(); start(); }
 
-    return { start: start, stop: stop, burst: burst };
+    return { start: start, stop: stop, burst: burst, burstAt: burstAt, confetti: confetti, rainHearts: rainHearts };
   }
 
   var fx = HeartField($('fx'));
+
+  /* ============================================================
+     卡通形象：小猫 / 小鱼 / 心形罐子
+     全部是手绘 SVG，靠 CSS 做眨眼、摆尾、悬浮
+     ============================================================ */
+  var DEFS_SVG = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' +
+    '<linearGradient id="gCat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc98b"/><stop offset=".58" stop-color="#f7ab5f"/><stop offset="1" stop-color="#e2914a"/></linearGradient>' +
+    '<linearGradient id="gFish" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb65e"/><stop offset=".55" stop-color="#ff8f3f"/><stop offset="1" stop-color="#ef6f2c"/></linearGradient>' +
+    '<linearGradient id="gJar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe8ef"/><stop offset=".5" stop-color="#ffc9d9"/><stop offset="1" stop-color="#f6a8c0"/></linearGradient>' +
+    '<linearGradient id="gJarTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9db6"/><stop offset="1" stop-color="#e2728f"/></linearGradient>' +
+    '</defs></svg>';
+
+  var CAT_SVG =
+    '<svg viewBox="0 0 100 90" role="img" aria-label="小猫">' +
+      '<g class="mst-tail" fill="none" stroke="#e2914a" stroke-width="9" stroke-linecap="round">' +
+        '<path d="M22 70C9 68 3 56 6 43c2-9 9-13 15-11"/>' +
+      '</g>' +
+      '<ellipse cx="50" cy="68" rx="27" ry="21" fill="url(#gCat)"/>' +
+      '<ellipse cx="36" cy="86" rx="9.5" ry="6" fill="#ffeed3"/>' +
+      '<ellipse cx="64" cy="86" rx="9.5" ry="6" fill="#ffeed3"/>' +
+      '<g class="mst-ear">' +
+        '<path d="M27 40 21.5 15 42.5 27Z" fill="#f7ab5f"/>' +
+        '<path d="M29.5 36 26.5 22 37 29Z" fill="#ffbccb"/>' +
+      '</g>' +
+      '<g class="mst-ear" style="animation-delay:.7s">' +
+        '<path d="M73 40 78.5 15 57.5 27Z" fill="#f7ab5f"/>' +
+        '<path d="M70.5 36 73.5 22 63 29Z" fill="#ffbccb"/>' +
+      '</g>' +
+      '<ellipse cx="50" cy="47" rx="26" ry="24" fill="url(#gCat)"/>' +
+      '<ellipse cx="29" cy="56" rx="6" ry="4.2" fill="#ff9db1" opacity=".45"/>' +
+      '<ellipse cx="71" cy="56" rx="6" ry="4.2" fill="#ff9db1" opacity=".45"/>' +
+      '<ellipse class="mst-eye" cx="39.5" cy="45" rx="4.6" ry="5.4" fill="#4a2b16"/>' +
+      '<ellipse class="mst-eye mst-eye-b" cx="60.5" cy="45" rx="4.6" ry="5.4" fill="#4a2b16"/>' +
+      '<ellipse cx="41" cy="43.4" rx="1.5" ry="1.7" fill="#fff"/>' +
+      '<ellipse cx="62" cy="43.4" rx="1.5" ry="1.7" fill="#fff"/>' +
+      '<path d="M50 51.5 46.6 55.2h6.8z" fill="#e2728f"/>' +
+      '<path d="M45.6 57.6c1.8 3.2 7 3.2 8.8 0" fill="none" stroke="#7a4a22" stroke-width="1.9" stroke-linecap="round"/>' +
+      '<g fill="none" stroke="#fff1dd" stroke-width="1.5" stroke-linecap="round" opacity=".92">' +
+        '<path d="M21 46 8 40M21 52 7 52M21 58 9 64"/>' +
+        '<path d="M79 46 92 40M79 52 93 52M79 58 91 64"/>' +
+      '</g>' +
+    '</svg>';
+
+  var FISH_SVG =
+    '<svg viewBox="0 0 112 76" role="img" aria-label="小鱼">' +
+      '<g class="mst-tail" fill="#f2703f">' +
+        '<path d="M76 38C86 24 96 16 110 10 104 24 102 30 102 38s2 14 8 28c-14-6-24-14-34-28Z"/>' +
+      '</g>' +
+      '<g class="mst-fin" fill="#ffa04f">' +
+        '<path d="M54 22C60 9 70 3 82 1 78 12 74 18 72 24Z"/>' +
+        '<path d="M38 58c-2 8-8 13-16 16 2-8 6-13 9-16Z" opacity=".9"/>' +
+      '</g>' +
+      '<ellipse cx="42" cy="38" rx="34" ry="26" fill="url(#gFish)"/>' +
+      '<path d="M24 22c10-9 30-13 44-8-16 1-32 4-44 8Z" fill="#ffd6ae" opacity=".55"/>' +
+      '<path d="M1 40C8 42 16 46 20 56c-6 2-13 1-19-3Z" fill="#ffb066" opacity=".9"/>' +
+      '<ellipse class="mst-eye" cx="24" cy="33" rx="8" ry="8.6" fill="#fff"/>' +
+      '<circle cx="22" cy="34" r="4.4" fill="#3b2416"/>' +
+      '<circle cx="20.4" cy="32.2" r="1.7" fill="#fff"/>' +
+      '<ellipse cx="38" cy="49" rx="7" ry="4.6" fill="#ff7f8f" opacity=".45"/>' +
+      '<path d="M23 50c4 4.6 12 4.6 16 0" fill="none" stroke="#a53f1a" stroke-width="2.2" stroke-linecap="round"/>' +
+      '<g fill="none" stroke="#f2703f" stroke-width="2" stroke-linecap="round" opacity=".8">' +
+        '<path d="M44 20c0-4-3-7-7-7M52 17c0-5-3-8-8-9"/>' +
+      '</g>' +
+    '</svg>';
+
+  var HEART_SVG = '<svg viewBox="0 0 32 32" role="img" aria-label="爱心"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>';
+
+  var JAR_SVG =
+    '<svg viewBox="0 0 100 104" role="img" aria-label="装满爱心的罐子">' +
+      '<rect x="26" y="28" width="48" height="60" rx="13" fill="url(#gJar)" stroke="#e2728f" stroke-width="3"/>' +
+      '<path d="M33 36h8v44h-8z" fill="#fff" opacity=".35"/>' +
+      '<g>' +
+        '<path d="M50 32.5C43 27.6 39.5 24 39.5 20.6c0-2.9 2.2-5 5-5 2 0 3.9 1.1 5.5 3.3 1.6-2.2 3.5-3.3 5.5-3.3 2.8 0 5 2.1 5 5 0 3.4-3.5 7-10.5 11.9Z" fill="#ff5d7e"/>' +
+        '<path d="M50 48.5c-6.6-4.6-10-8-10-11.2 0-2.7 2.1-4.7 4.7-4.7 1.9 0 3.7 1 5.3 3.1 1.6-2.1 3.4-3.1 5.3-3.1 2.6 0 4.7 2 4.7 4.7 0 3.2-3.4 6.6-10 11.2Z" fill="#ff8fa3"/>' +
+        '<path d="M50 66.5c-6.6-4.6-10-8-10-11.2 0-2.7 2.1-4.7 4.7-4.7 1.9 0 3.7 1 5.3 3.1 1.6-2.1 3.4-3.1 5.3-3.1 2.6 0 4.7 2 4.7 4.7 0 3.2-3.4 6.6-10 11.2Z" fill="#ffc2ce"/>' +
+      '</g>' +
+      '<rect x="29" y="19" width="42" height="10" rx="5" fill="url(#gJarTop)"/>' +
+      '<rect x="33" y="12" width="34" height="9" rx="4.5" fill="#ff9db6" stroke="#e2728f" stroke-width="2.4"/>' +
+      '<g class="mst-spark" fill="#ffd76e"><path d="M18 12l1.7 3.6L23 17.3l-3.3 1.7L18 22.6l-1.7-3.6L13 17.3l3.3-1.7Z"/><path d="M83 26l1.3 2.7 2.7 1.3-2.7 1.3L83 34l-1.3-2.7L79 30l2.7-1.3Z"/></g>' +
+    '</svg>';
+
+  var MASCOT_LIST = ['cat', 'fish', 'jar'];
+  function isOn(id) {
+    var m = CFG.mascots || {};
+    if (m.enabled === false) return false;
+    return m[id] !== false;
+  }
+  function pickMascot(i) {
+    var list = MASCOT_LIST.filter(isOn);
+    if (!list.length) return 'cat';
+    return list[i % list.length];
+  }
+
+  /* 把形象注入所有 data-slot 占位；先按配置去掉关闭的形象 */
+  (function mountMascots() {
+    if (document.head && document.head.appendChild) {
+      var holder = document.createElement('div');
+      holder.style.display = 'none';
+      holder.innerHTML = DEFS_SVG;
+      document.head.appendChild(holder);
+    }
+    var svgs = { cat: CAT_SVG, fish: FISH_SVG, jar: JAR_SVG, heart: HEART_SVG };
+    var slots = document.querySelectorAll ? document.querySelectorAll('[data-slot]') : [];
+    for (var i = 0; i < slots.length; i++) {
+      var slot = slots[i];
+      var name = slot.getAttribute ? slot.getAttribute('data-slot') : null;
+      if (!name) continue;
+      if (name !== 'heart' && name !== 'bubbles' && !isOn(name)) {
+        if (slot.parentNode) slot.parentNode.removeChild(slot);
+        continue;
+      }
+      if (name === 'bubbles') {
+        var html = '';
+        for (var b = 0; b < 4; b++) {
+          html += '<i class="bb" style="animation-duration:' + (2.4 + b * 0.5).toFixed(1) + 's;animation-delay:' + (b * 0.6).toFixed(1) + 's;--dx:' + (4 + b * 3) + 'px;left:' + (b * 4) + 'px"></i>';
+        }
+        slot.innerHTML = html;
+        continue;
+      }
+      slot.innerHTML = svgs[name] || '';
+    }
+  })();
+
+  /* 点一下形象 → 撒爱心 / 吐泡泡 */
+  function cheer(el, kind) {
+    el.classList.remove('happy');
+    void el.offsetWidth;
+    el.classList.add('happy');
+    sound.pop();
+    var r = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+    if (r) fx.burstAt(r.left + r.width / 2, r.top + r.height / 2, kind, 12);
+  }
+
+  var mascotCat = $('mascotCat');
+  var mascotFish = $('mascotFishEnvelope');
+  var jar = null;
+  if (isOn('jar')) {
+    jar = document.createElement('div');
+    jar.className = 'mascot mascot-jar';
+    jar.setAttribute('aria-hidden', 'true');
+    jar.innerHTML = '<div class="jar-float" data-slot="jar"></div>';
+    envWrap.appendChild(jar);
+    var jarSvg = jar.querySelector ? jar.querySelector('[data-slot="jar"]') : null;
+    if (jarSvg) jarSvg.innerHTML = JAR_SVG;
+  }
+  if (mascotCat) mascotCat.addEventListener('click', function (e) { e.stopPropagation(); cheer(mascotCat, 'heart'); });
+  if (mascotFish) mascotFish.addEventListener('click', function (e) { e.stopPropagation(); cheer(mascotFish, 'bubble'); });
+  if (jar) jar.addEventListener('click', function (e) { e.stopPropagation(); cheer(jar, 'heart'); });
+
+  /* 信纸里每一幕的小陪读（换幕时先退场再登场） */
+  var paperMascot = $('paperMascot');
+  var mascotTimer = 0;
+  function showMascot(id) {
+    return new Promise(function (res) {
+      if (!paperMascot) { res(); return; }
+      if (mascotTimer) { clearTimeout(mascotTimer); mascotTimer = 0; }
+      var slots = paperMascot.querySelectorAll ? paperMascot.querySelectorAll('[data-slot]') : [];
+      var next = paperMascot.querySelector ? paperMascot.querySelector('[data-slot="' + id + '"]') : null;
+      if (!next) next = paperMascot.querySelector ? paperMascot.querySelector('[data-slot="cat"]') : null;
+      if (!next) { res(); return; }
+      var shown = [];
+      for (var i = 0; i < slots.length; i++) if (slots[i].classList.contains('in')) shown.push(slots[i]);
+      var leaving = shown.some(function (s) { return s !== next; });
+      if (leaving) {
+        shown.forEach(function (s) { if (s !== next) { s.classList.remove('in'); s.classList.add('out'); } });
+        mascotTimer = setTimeout(function () {
+          mascotTimer = 0;
+          shown.forEach(function (s) { s.classList.remove('out'); });
+          next.classList.remove('out');
+          void next.offsetWidth;
+          next.classList.add('in');
+          next.setAttribute('data-kind', id);
+          res();
+        }, 230);
+      } else {
+        next.classList.remove('out');
+        void next.offsetWidth;
+        next.classList.add('in');
+        next.setAttribute('data-kind', id);
+        res();
+      }
+    });
+  }
+  if (paperMascot) {
+    paperMascot.addEventListener('click', function () {
+      var shown = paperMascot.querySelector ? paperMascot.querySelector('.in') : null;
+      if (!shown) return;
+      cheer(shown, shown.getAttribute('data-kind') === 'fish' ? 'bubble' : 'heart');
+    });
+  }
+  /* 落款处的两个形象也可以点 */
+  var duo = document.querySelector ? document.querySelector('.duo') : null;
+  if (duo) {
+    duo.addEventListener('click', function (e) {
+      var t = e.target && e.target.closest ? e.target.closest('[data-slot]') : null;
+      if (!t) return;
+      cheer(t, t.getAttribute('data-slot') === 'fish' ? 'bubble' : 'heart');
+    });
+  }
+
+  /* 火漆封印的图案：默认爱心，可换成小鱼 */
+  (function mountSeal() {
+    if ($('sealIcon').innerHTML && (CFG.mascots || {}).seal !== 'fish') return;
+    if ((CFG.mascots || {}).seal === 'fish') {
+      $('sealIcon').innerHTML =
+        '<svg viewBox="0 0 96 96" aria-hidden="true">' +
+          '<ellipse cx="40" cy="50" rx="26" ry="20" class="ic-fish-body"/>' +
+          '<path d="M64 50c8-7 14-12 20-16-2 6-3 11-3 16s1 10 3 16c-6-4-12-9-20-16Z" class="ic-fish-tail"/>' +
+          '<path d="M40 30c5-7 12-11 19-13-2 8-4 13-6 18Z" class="ic-fish-top"/>' +
+          '<circle cx="30" cy="46" r="5.4" class="ic-eye"/>' +
+          '<circle cx="28.6" cy="47" r="2.6" class="ic-piece"/>' +
+          '<path d="M30 60c4 4 10 4 14 0" fill="none" stroke="#7a0f2a" stroke-width="2.6" stroke-linecap="round"/>' +
+        '</svg>';
+    } else {
+      $('sealIcon').innerHTML = '<svg viewBox="0 0 32 32" aria-hidden="true"><path class="ic-heart" d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>';
+    }
+  })();
 
   /* ---------------- 轻音效（可关） ---------------- */
   var sound = (function () {
@@ -304,6 +626,10 @@
       },
       finale: function () {
         [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) { tone(f, 1.5, 0.04, 'sine', i * 0.14); });
+      },
+      pop: function () {
+        tone(880 + Math.random() * 320, 0.16, 0.045, 'sine');
+        tone(1320 + Math.random() * 420, 0.12, 0.025, 'triangle', 0.04);
       }
     };
   })();
@@ -730,6 +1056,8 @@
       elBody2.innerHTML = '';
       setSkip(false);
       step = null;
+      /* 换一位小陪读出场 */
+      var mascotReady = showMascot(stage.mascot || pickMascot(i - 1));
       /* 每一幕都从头看起 */
       try { elTitle.scrollIntoView({ block: 'start', behavior: REDUCED ? 'auto' : 'smooth' }); }
       catch (e) { paperScroll.scrollTop = 0; }
@@ -742,8 +1070,8 @@
 
       typeSeq(stage.open || [], elBody, tk).then(function (ok) {
         if (!ok || tk !== TOKEN || !running) return false;
-        /* 等标题也打完再往下走 */
-        return titleSeq.then(waitText).then(function () {
+        /* 等标题和小陪读都就位，再往下走 */
+        return Promise.all([titleSeq, mascotReady]).then(waitText).then(function () {
           if (tk !== TOKEN || !running) return false;
           if (!hasVideo) return afterVideo().then(function () { return true; });
           if (CFG.video.mode === 'cine') {
@@ -818,8 +1146,11 @@
       elEnd.classList.add('on');
       bigHeart.classList.add('on');
       sound.finale();
-      fx.burst(26);
-      setTimeout(function () { if (tk === TOKEN && running) fx.burst(16); }, 640);
+      fx.confetti(30);
+      fx.rainHearts(18);
+      later(700, tk).then(function (ok2) {
+        if (ok2 && running) fx.rainHearts(12);
+      });
     });
   }
 
