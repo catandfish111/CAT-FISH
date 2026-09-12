@@ -16,14 +16,30 @@
   · 后缀必须是 .mp4（不是把别的格式直接改后缀，要是真的 mp4）
   · 换新视频时建议换个文件名（如 video1b.mp4），否则微信可能还在用旧的缓存
 
+  ★ 当前 video1.mp4 是什么：
+      1080×1442 竖屏，39.3 秒，30fps，H.264(High) + AAC
+      29.1 MB，已做 faststart（索引在文件开头，微信里能边下边播）
+      来源：原始素材 42.4MB / 8914 kb/s 重编码为 CRF 20（视觉无损）
+      实测画质：PSNR 50.2 dB、SSIM 0.9904 —— 肉眼无法分辨
+
 二、格式规格（微信里播放最稳）
   · 容器/编码：MP4（H.264 视频 + AAC 音频）；不要用 HEVC/H.265，微信常不认
+      注意音频也要是 AAC：像 mp3 装进 MP4（codec 显示 mp4a 但实际是 mp3float）
+      在部分安卓机上放不出声音，转成 AAC 最稳
   · 分辨率：1080p 以内都行，竖屏 1080×1920 也支持（会自动等比放进框里）
   · 时长：15 秒 ~ 1 分钟最好，太长看着容易走神
   · 大小：单个 50MB 以内最好（GitHub 单文件上限 100MB，超了传不上去）
   · 要转换/压缩的话，ffmpeg 一行命令：
-      ffmpeg -i 原视频.mov -c:v libx264 -crf 23 -preset medium -c:a aac -b:a 128k -movflags +faststart video1.mp4
-    最后的 -movflags +faststart 很关键：把索引放到文件开头，微信里能边下边播，不用先转圈很久。
+      ffmpeg -i 原视频.mov -c:v libx264 -preset slower -crf 20 -pix_fmt yuv420p ^
+             -c:a aac -b:a 160k -movflags +faststart video1.mp4
+    说明：
+      -crf 20  → 画面质量，数字越小越清晰越大（18 更保真、23 更小；20~22 基本看不出差别）
+      -preset slower → 压得慢但更省体积；赶时间可以换成 medium
+      -movflags +faststart → 必须加！把索引放到文件开头，微信里能边下边播，
+                             否则会像原素材那样先转圈十几秒
+    这台电脑上现成可用的 ffmpeg（不用另外装）：
+      C:\Program Files\WoCloud\resources\ffmpeg\ffmpeg.exe
+      D:\JianyingPro\11.4.2.14459\ffmpeg.exe
 
 三、怎么传上来（二选一）
   A. 网页上传（不用装任何东西）
