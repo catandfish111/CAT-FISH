@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<meta name="theme-color" content="#251016">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="referrer" content="no-referrer">
+<meta name="description" content="写给你的一封信">
+<meta property="og:title" content="写给你的一封信">
+<meta property="og:description" content="点开信封，里面装着我全部的心里话。">
+<title>写给你的一封信</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app" class="stage" data-phase="sealed">
+
+  <!-- 背景：暖色光晕 + 爱心粒子（canvas） -->
+  <canvas id="fx" class="fx" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <button id="sound" class="sound is-off" type="button" aria-label="打开声音" title="声音">
+    <svg class="ico-mute" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 9h3l5-4v14l-5-4H4z"/>
+      <path d="M16 9l5 6M21 9l-5 6" class="ico-x"/>
+    </svg>
+    <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 9h3l5-4v14l-5-4H4z"/>
+      <path d="M15.6 8.6a5 5 0 0 1 0 6.8M18.2 6.2a8.5 8.5 0 0 1 0 11.6" class="ico-wave"/>
+    </svg>
+  </button>
+
+  <!-- 第一幕：信封 -->
+  <section class="scene scene-envelope" id="scene-envelope">
+    <p class="intro-line" id="introLine">写给你的一封信</p>
+
+    <div class="env-wrap" id="envWrap">
+      <div class="env" id="env" role="img" aria-label="一封信">
+        <div class="env-back"></div>
+        <div class="env-letter" id="envLetter">
+          <div class="mini-note">
+            <span class="mini-heart"></span>
+            <span id="miniNote">只给你看</span>
+          </div>
+        </div>
+        <div class="env-body">
+          <div class="env-pocket"></div>
+        </div>
+        <div class="env-flap" id="envFlap">
+          <div class="env-flap-inner"></div>
+        </div>
+        <button class="env-seal" id="envSeal" type="button" aria-label="打开信封">
+          <span class="seal-glow" aria-hidden="true"></span>
+          <span class="seal-heart" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <p class="hint" id="envHint">轻触这里，打开信封</p>
+  </section>
+
+  <!-- 第二幕：信纸 -->
+  <section class="paper" id="paper" role="dialog" aria-modal="true" aria-label="写给你的信" hidden>
+    <header class="paper-head">
+      <span class="stage-tag"><b id="stageNo">01</b><i>/</i><span id="stageTotal">04</span></span>
+      <span class="stage-name" id="stageName">启封</span>
+      <button class="paper-skip" id="paperSkip" type="button" hidden>跳过</button>
+      <button class="paper-close" id="paperClose" type="button" aria-label="收好这封信">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="paper-scroll" id="paperScroll">
+      <h1 class="paper-title" id="letterTitle"></h1>
+      <div class="paper-body" id="letterBody"></div>
+      <div class="video-slot">
+        <div class="video-frame">
+          <video id="letterVideo" playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="false" preload="metadata" muted loop></video>
+          <div class="video-empty" id="videoEmpty">
+            <span class="ve-heart" aria-hidden="true">
+              <svg viewBox="0 0 32 32"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>
+            </span>
+            <p class="ve-title" id="videoEmptyTitle">视频还在路上</p>
+            <p class="ve-sub" id="videoEmptySub">把文件放进 assets 文件夹就会自动播放</p>
+            <button class="ve-retry" id="videoRetry" type="button">再看一次</button>
+          </div>
+          <button class="video-play" id="videoPlay" type="button" aria-label="播放视频" hidden>
+            <span class="vp-ring"></span>
+            <svg viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z"/></svg>
+          </button>
+          <button class="video-sound" id="videoSound" type="button" aria-label="视频声音" title="视频声音">
+            <svg class="ico-mute" viewBox="0 0 24 24"><path d="M4 9h3l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6" class="ico-x"/></svg>
+            <svg class="ico-on" viewBox="0 0 24 24"><path d="M4 9h3l5-4v14l-5-4H4z"/><path d="M15.6 8.6a5 5 0 0 1 0 6.8M18.2 6.2a8.5 8.5 0 0 1 0 11.6" class="ico-wave"/></svg>
+          </button>
+        </div>
+        <p class="video-cap" id="letterCaption"></p>
+      </div>
+      <div class="paper-body paper-body-2" id="letterBody2"></div>
+      <div class="paper-end" id="letterEnd">
+        <p class="sign" id="letterSign"></p>
+        <div class="big-heart" id="bigHeart">
+          <svg viewBox="0 0 32 32"><path d="M16 28.4C6.7 21.9 2 16.6 2 11.2 2 6.9 5.3 4 9.2 4c2.6 0 5 1.4 6.8 4.1C17.8 5.4 20.2 4 22.8 4 26.7 4 30 6.9 30 11.2c0 5.4-4.7 10.7-14 17.2z"/></svg>
+          <span class="tap-hint-word">轻触重新看一遍</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 副幕：视频全屏 -->
+  <section class="cine" id="cine" hidden>
+    <div class="cine-inner">
+      <video id="cineVideo" playsinline webkit-playsinline x5-playsinline preload="metadata" muted loop></video>
+      <button class="cine-play" id="cinePlay" type="button" aria-label="播放">
+        <svg viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z"/></svg>
+      </button>
+      <button class="cine-skip" id="cineSkip" type="button">跳过</button>
+      <p class="cine-tip">轻触画面播放 · 右上角可跳过</p>
+    </div>
+  </section>
+
+  <div class="veil" id="veil" hidden></div>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js" defer></script>
+</body>
+</html>
