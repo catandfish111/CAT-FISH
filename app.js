@@ -398,24 +398,29 @@
     '</svg>';
 
   var FISH_SVG =
-    '<svg viewBox="0 0 112 76" role="img" aria-label="小鱼">' +
-      '<g class="mst-tail" fill="#f2703f">' +
-        '<path d="M76 38C86 24 96 16 110 10 104 24 102 30 102 38s2 14 8 28c-14-6-24-14-34-28Z"/>' +
+    '<svg viewBox="0 0 112 84" role="img" aria-label="可爱的小鱼">' +
+      '<g class="mst-tail" fill="#ff9db6">' +
+        '<path d="M75 42c10-13 21-20 35-25-5 10-7 17-7 25s2 15 7 25c-14-5-25-12-35-25Z"/>' +
       '</g>' +
-      '<g class="mst-fin" fill="#ffa04f">' +
-        '<path d="M54 22C60 9 70 3 82 1 78 12 74 18 72 24Z"/>' +
-        '<path d="M38 58c-2 8-8 13-16 16 2-8 6-13 9-16Z" opacity=".9"/>' +
+      '<g class="mst-fin" fill="#ffc2ce">' +
+        '<path d="M43 19c4-11 13-16 24-17-2 10-6 17-14 23Z"/>' +
+        '<path d="M42 64c-3 10-10 15-20 17 2-9 6-15 13-20Z" opacity=".95"/>' +
+        '<path d="M46 16c-5-7-12-8-17-5 1 6 6 10 13 11Z"/>' +
       '</g>' +
-      '<ellipse cx="42" cy="38" rx="34" ry="26" fill="url(#gFish)"/>' +
-      '<path d="M24 22c10-9 30-13 44-8-16 1-32 4-44 8Z" fill="#ffd6ae" opacity=".55"/>' +
-      '<path d="M1 40C8 42 16 46 20 56c-6 2-13 1-19-3Z" fill="#ffb066" opacity=".9"/>' +
-      '<ellipse class="mst-eye" cx="24" cy="33" rx="8" ry="8.6" fill="#fff"/>' +
-      '<circle cx="22" cy="34" r="4.4" fill="#3b2416"/>' +
-      '<circle cx="20.4" cy="32.2" r="1.7" fill="#fff"/>' +
-      '<ellipse cx="38" cy="49" rx="7" ry="4.6" fill="#ff7f8f" opacity=".45"/>' +
-      '<path d="M23 50c4 4.6 12 4.6 16 0" fill="none" stroke="#a53f1a" stroke-width="2.2" stroke-linecap="round"/>' +
-      '<g fill="none" stroke="#f2703f" stroke-width="2" stroke-linecap="round" opacity=".8">' +
-        '<path d="M44 20c0-4-3-7-7-7M52 17c0-5-3-8-8-9"/>' +
+      '<ellipse cx="43" cy="43" rx="35" ry="28" fill="url(#gFish)"/>' +
+      '<ellipse cx="48" cy="52" rx="22" ry="13" fill="#ffd6ae" opacity=".24"/>' +
+      '<path d="M17 30c11-13 31-18 50-11-16 1-35 6-50 11Z" fill="#ffe6c9" opacity=".66"/>' +
+      '<path d="M2 44c8 1 15 7 19 15-7 3-14 2-20-2Z" fill="#ffb066" opacity=".9"/>' +
+      '<ellipse class="mst-eye" cx="24" cy="37" rx="9" ry="10" fill="#fff"/>' +
+      '<circle cx="22" cy="39" r="5" fill="#3b2416"/>' +
+      '<circle cx="20.3" cy="36.4" r="2" fill="#fff"/>' +
+      '<ellipse cx="36" cy="54" rx="7.5" ry="4.8" fill="#ff718e" opacity=".58"/>' +
+      '<ellipse cx="57" cy="53" rx="6.5" ry="4.2" fill="#ff718e" opacity=".4"/>' +
+      '<path d="M25 55c5 5 13 5 18 0" fill="none" stroke="#a53f1a" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<path d="M47 32c4-3 8-3 11 0" fill="none" stroke="#d8583b" stroke-width="2" stroke-linecap="round" opacity=".72"/>' +
+      '<path d="M48 16c-3-4-2-8 2-10 1 4 3 6 7 7-2 3-5 4-9 3Z" fill="#ffec9f" opacity=".92"/>' +
+      '<g fill="none" stroke="#f2703f" stroke-width="2" stroke-linecap="round" opacity=".78">' +
+        '<path d="M66 25c0-4-3-7-7-8M70 29c1-4 4-6 8-6"/>' +
       '</g>' +
     '</svg>';
 
