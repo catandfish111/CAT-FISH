@@ -199,6 +199,9 @@
     if (bubuCountdownMode) bubuCountdownMode.textContent = bubuData.timer.mode === 'break' ? '休息' : '专注';
     if (bubuCountdownClock) bubuCountdownClock.textContent = formatBubuSeconds(bubuTimerRemaining());
   }
+  var bubuActionSeq = 0;
+  var bubuLastActionAt = 0;
+  var bubuAutoNextAt = Date.now() + 22000;
   function setBubuImage(action) {
     if (!bubuImage || !action) return;
     bubuImage.alt = action.file.replace(/\.gif$/i, '');
@@ -206,10 +209,14 @@
       bubuImage.onerror = null;
       bubuImage.src = BUBU_FALLBACK;
     };
-    bubuImage.src = bubuAsset(action.file) + '?v=' + Date.now();
+    /* 使用稳定 URL，让手机复用已经下载过的 GIF 缓存。 */
+    var src = bubuAsset(action.file);
+    if (bubuImage.src !== src) bubuImage.src = src;
   }
   function showBubuAction(action, quote, duration) {
     action = action || BUBU_ACTIONS[13];
+    var actionSeq = ++bubuActionSeq;
+    bubuLastActionAt = Date.now();
     setBubuImage(action);
     if (bubuActionChip) bubuActionChip.textContent = action.file.replace(/\.gif$/i, '');
     if (bubuPet) {
@@ -227,7 +234,7 @@
       setTimeout(function () { bubuPet.classList.remove('is-happy'); }, 760);
     }
     if (duration) setTimeout(function () {
-      if (bubuData.settings.auto && !bubuFeaturePanel || !bubuFeaturePanel || bubuFeaturePanel.hidden) showBubuAction(BUBU_ACTIONS[13], '安安静静陪着你。');
+      if (actionSeq === bubuActionSeq && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden)) showBubuAction(BUBU_ACTIONS[13], '安安静静陪着你。');
     }, duration);
   }
   function renderBubuNoteWidget() {
@@ -251,7 +258,7 @@
     if (panel === 'actions') {
       bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>全部动作</span><small>点选后布布会立刻换装</small></div><div class="bubu-action-grid">' +
         BUBU_ACTIONS.map(function (action, index) {
-          return '<button class="bubu-action-item" type="button" data-bubu-action="' + index + '"><img src="' + bubuAsset(action.file) + '" alt="' + escapeBubuHtml(action.file) + '"><span>' + escapeBubuHtml(action.file.replace(/\.gif$/i, '')) + '</span></button>';
+          return '<button class="bubu-action-item" type="button" data-bubu-action="' + index + '"><img loading="lazy" decoding="async" src="' + bubuAsset(action.file) + '" alt="' + escapeBubuHtml(action.file) + '"><span>' + escapeBubuHtml(action.file.replace(/\.gif$/i, '')) + '</span></button>';
         }).join('') + '</div>';
     } else if (panel === 'notes') {
       bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>留一句给彼此</span><small>内容保存在这台设备的浏览器里</small></div><textarea class="bubu-field bubu-note-field" id="bubuNoteInput" rows="5" placeholder="写下今天想说的话……">' + escapeBubuHtml(bubuData.note) + '</textarea><div class="bubu-form-actions"><button class="bubu-primary" type="button" data-bubu-note-save>保存便签</button><button type="button" data-bubu-note-pin>' + (bubuData.notePinned ? '取消贴在首页' : '贴在首页') + '</button></div>';
@@ -487,7 +494,11 @@
   }
   setInterval(function () {
     bubuTimerTick(); checkBubuReminders();
-    if (!bubuData.settings.quiet && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden) && (!app || app.dataset.phase === 'space') && !bubuDrag && Math.random() < .12) showBubuAction(randomBubuAction(), null, 2200);
+    var now = Date.now();
+    if (now >= bubuAutoNextAt && !bubuData.settings.quiet && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden) && (!app || app.dataset.phase === 'space') && !bubuDrag && now - bubuLastActionAt >= 18000) {
+      showBubuAction(randomBubuAction(), null, 2200);
+      bubuAutoNextAt = Date.now() + 22000 + Math.floor(Math.random() * 12000);
+    }
   }, 1000);
   updateBubuCountdown();
 
