@@ -63,6 +63,11 @@
   var cineVideo = $('cineVideo');
   var cinePlay = $('cinePlay');
   var cineSkip = $('cineSkip');
+  var spaceHome = $('spaceHome');
+  var openLetter = $('openLetter');
+  var spaceBack = $('spaceBack');
+  var spaceToast = $('spaceToast');
+  var spaceMenu = $('spaceMenu');
 
   /* ---------------- 流程状态 ---------------- */
   var TOKEN = {};        // 每次开信封换一个，旧流程的回调会自动作废
@@ -71,6 +76,45 @@
   var typing = null;     // 当前打字任务
   var typingEls = [];    // 正在打字的元素（标题和正文可能同时在打）
   var busy = false;      // 防止连点跳过重复触发
+
+  function enterLetter() {
+    if (!app || app.dataset.phase !== 'space') return;
+    app.dataset.phase = 'sealed';
+    if (spaceHome) spaceHome.setAttribute('aria-hidden', 'true');
+    sound.unlock();
+  }
+
+  function returnToSpace() {
+    if (!app || app.dataset.phase !== 'sealed') return;
+    app.dataset.phase = 'space';
+    if (spaceHome) spaceHome.removeAttribute('aria-hidden');
+    if (fx && fx.start) fx.start();
+  }
+
+  function showSpaceToast(message) {
+    if (!spaceToast) return;
+    spaceToast.textContent = message;
+    spaceToast.classList.remove('is-visible');
+    void spaceToast.offsetWidth;
+    spaceToast.classList.add('is-visible');
+    setTimeout(function () { spaceToast.classList.remove('is-visible'); }, 2400);
+  }
+
+  if (openLetter) openLetter.addEventListener('click', enterLetter);
+  if (spaceBack) spaceBack.addEventListener('click', returnToSpace);
+  if (spaceMenu) spaceMenu.addEventListener('click', function () { showSpaceToast('空间设置会在下一步开放'); });
+  var spaceTools = document.querySelectorAll('[data-space-tool]');
+  for (var spaceIndex = 0; spaceIndex < spaceTools.length; spaceIndex++) {
+    (function (button) {
+      button.addEventListener('click', function () {
+      var label = button.getAttribute('data-space-tool');
+      if (label === 'memories') showSpaceToast('回忆盒子正在为你们准备中');
+      else if (label === 'calendar') showSpaceToast('重要的日子，值得被认真记住');
+      else if (label === 'wishes') showSpaceToast('把想一起完成的事，慢慢写下来');
+      else showSpaceToast('这个空间会慢慢长出更多故事');
+      });
+    })(spaceTools[spaceIndex]);
+  }
 
   /* 延时：token 变了就自动作废 */
   function later(ms, tk) {
@@ -1281,7 +1325,8 @@
       paper.hidden = true;
       paper.classList.remove('is-out');
       veil.hidden = true;
-      app.dataset.phase = 'sealed';
+      app.dataset.phase = 'space';
+      if (spaceHome) spaceHome.removeAttribute('aria-hidden');
       envHint.style.animation = 'none';
       void envHint.offsetWidth;   /* 强制回流，重播呼吸动画 */
       envHint.style.animation = '';

@@ -4,23 +4,79 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="format-detection" content="telephone=no,email=no,address=no">
-<meta name="theme-color" content="#251016">
+<meta name="theme-color" content="#8bd9f7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="referrer" content="no-referrer">
-<meta name="description" content="写给你的一封信">
-<meta property="og:title" content="写给你的一封信">
-<meta property="og:description" content="点开信封，里面装着我全部的心里话。">
-<title>写给你的一封信</title>
+<meta name="description" content="小鱼和小猫的情侣空间">
+<meta property="og:title" content="小鱼和小猫的情侣空间">
+<meta property="og:description" content="把喜欢的每一天，慢慢收集起来。">
+<title>小鱼和小猫的情侣空间</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="app" class="stage" data-phase="sealed">
+<div id="app" class="stage" data-phase="space">
 
   <!-- 背景：暖色光晕 + 爱心粒子（canvas） -->
   <canvas id="fx" class="fx" aria-hidden="true"></canvas>
   <div class="vignette" aria-hidden="true"></div>
+
+  <!-- 情侣空间首页：信封只是其中一个入口，其他模块可以继续扩展。 -->
+  <section class="space-home" id="spaceHome" aria-label="情侣空间首页">
+    <header class="space-topbar">
+      <div class="space-brand"><span class="space-brand-mark">♡</span><span>我们的空间</span></div>
+      <button class="space-menu" id="spaceMenu" type="button" aria-label="空间设置" title="空间设置">
+        <span></span><span></span><span></span>
+      </button>
+    </header>
+    <main class="space-content">
+      <section class="space-hero" aria-labelledby="spaceTitle">
+        <p class="space-eyebrow">小鱼和小猫 · 一直在一起</p>
+        <h1 id="spaceTitle">把每一天，过成我们的纪念日</h1>
+        <p class="space-subtitle">收好心动、记下日常，也把想说的话留给彼此。</p>
+        <div class="space-couple-line">
+          <span class="space-avatar avatar-cat" data-slot="cat" aria-label="小猫"></span>
+          <span class="space-connection"><i></i><b>♡</b><i></i></span>
+          <span class="space-avatar avatar-fish" data-slot="fish" aria-label="小鱼"></span>
+        </div>
+        <p class="space-days">今天也是一起走过的第 <strong>1</strong> 天</p>
+      </section>
+
+      <section class="space-tools" aria-label="情侣空间功能">
+        <div class="space-section-heading"><span>我们的日常</span><small>SPACE 01</small></div>
+        <div class="space-tool-grid">
+          <button class="space-tool space-tool-primary" id="openLetter" type="button">
+            <span class="tool-icon tool-icon-letter">✉</span>
+            <span class="tool-copy"><b>写给你的信</b><small>把心里话交给你</small></span>
+            <span class="tool-arrow">→</span>
+          </button>
+          <button class="space-tool" type="button" data-space-tool="memories">
+            <span class="tool-icon tool-icon-memory">✦</span>
+            <span class="tool-copy"><b>我们的回忆</b><small>照片和故事正在收集</small></span>
+            <span class="tool-arrow">→</span>
+          </button>
+          <button class="space-tool" type="button" data-space-tool="calendar">
+            <span class="tool-icon tool-icon-calendar">♡</span>
+            <span class="tool-copy"><b>恋爱日历</b><small>重要日子不会忘记</small></span>
+            <span class="tool-arrow">→</span>
+          </button>
+          <button class="space-tool" type="button" data-space-tool="wishes">
+            <span class="tool-icon tool-icon-wish">✧</span>
+            <span class="tool-copy"><b>想和你一起</b><small>把未来写进清单</small></span>
+            <span class="tool-arrow">→</span>
+          </button>
+        </div>
+      </section>
+    </main>
+    <nav class="space-nav" aria-label="空间导航">
+      <button class="space-nav-item is-active" type="button"><span>⌂</span><small>首页</small></button>
+      <button class="space-nav-item" type="button" data-space-tool="memories"><span>♡</span><small>回忆</small></button>
+      <button class="space-nav-item" type="button" data-space-tool="wishes"><span>✦</span><small>愿望</small></button>
+      <button class="space-nav-item" type="button" data-space-tool="settings"><span>···</span><small>更多</small></button>
+    </nav>
+    <div class="space-toast" id="spaceToast" role="status" aria-live="polite"></div>
+  </section>
 
   <button id="sound" class="sound is-off" type="button" aria-label="打开声音" title="声音">
     <svg class="ico-mute" viewBox="0 0 24 24" aria-hidden="true">
@@ -35,6 +91,7 @@
 
   <!-- 第一幕：信封 -->
   <section class="scene scene-envelope" id="scene-envelope">
+    <button class="space-back" id="spaceBack" type="button" aria-label="返回情侣空间" title="返回情侣空间">←</button>
     <p class="intro-line" id="introLine">写给你的一封信</p>
 
     <!-- 卡通小鱼（信封右上，会摆尾吐泡） -->
