@@ -355,6 +355,34 @@
 
   var fx = HeartField($('fx'));
 
+  /* 手机轻触背景时，弹出一小簇有方向感的爱心。 */
+  (function bindTapHearts() {
+    var touchStart = null;
+    var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (!isTouch) return;
+
+    function isInteractive(target) {
+      if (!target || !target.closest) return false;
+      return !!target.closest('button,a,input,textarea,select,video,.env,.paper,.mascot,.duo,[data-slot]');
+    }
+
+    document.addEventListener('touchstart', function (e) {
+      var t = e.touches && e.touches[0];
+      if (t) touchStart = { x: t.clientX, y: t.clientY };
+    }, { passive: true });
+
+    document.addEventListener('touchend', function (e) {
+      var t = e.changedTouches && e.changedTouches[0];
+      if (!t || !touchStart) return;
+      var dx = t.clientX - touchStart.x;
+      var dy = t.clientY - touchStart.y;
+      var moved = Math.sqrt(dx * dx + dy * dy);
+      touchStart = null;
+      if (moved > 16 || isInteractive(e.target)) return;
+      fx.burstAt(t.clientX, t.clientY, 'heart', 8);
+    }, { passive: true });
+  })();
+
   /* ============================================================
      卡通形象：小猫 / 小鱼 / 心形罐子
      全部是手绘 SVG，靠 CSS 做眨眼、摆尾、悬浮
@@ -895,7 +923,7 @@
     v.setAttribute('x5-video-player-type', 'h5');
     v.setAttribute('x5-video-player-fullscreen', 'false');
     v.preload = 'auto';
-    v.muted = CFG.video.muted !== false;
+    v.muted = false;
     v.loop = !!CFG.video.loop;
     if (stage.poster) v.setAttribute('poster', stage.poster);
     v.src = absUrl(stage.video);
@@ -905,8 +933,8 @@
     play.type = 'button';
     play.className = 'video-play';
     play.setAttribute('aria-label', '播放视频');
-    play.hidden = true;
-    play.innerHTML = '<span class="vp-ring"></span><svg viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z"/></svg>';
+    play.hidden = false;
+    play.innerHTML = '<span class="vp-ring"></span><svg viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z"/></svg><span class="video-play-label">开始</span>';
     frame.appendChild(play);
 
     var vSound = document.createElement('button');
@@ -950,6 +978,8 @@
     function markReady() { ready = true; }
     function attempt() {
       if (done || stopped || !ready) return;
+      c.video.muted = false;
+      c.sound.classList.remove('is-off');
       c.play.hidden = true;
       setRate(c.video);
       playOut(c.video, function () { if (!done && !stopped) c.play.hidden = false; });
@@ -974,8 +1004,10 @@
       if (!v.muted) attempt();
     });
     v.addEventListener('click', function () {
-      if (v.paused) attempt();
-      else { try { v.pause(); } catch (e) { /* 忽略 */ } c.play.hidden = false; }
+      if (!v.paused) {
+        try { v.pause(); } catch (e) { /* ignore */ }
+      }
+      c.play.hidden = false;
     });
     function startPoll() {
       if (timer) return;
@@ -984,15 +1016,13 @@
         ticks += 1;
         if (done || stopped) { clearInterval(timer); timer = 0; return; }
         if (!ready && (v.readyState >= 3 || v.videoWidth)) markReady();
-        if (ready && v.paused && !v.ended) attempt();
+        if (ready && v.paused && !v.ended) c.play.hidden = false;
       }, 450);
     }
 
     try { v.load(); } catch (e) { /* 忽略 */ }
     startPoll();
     c.sound.style.display = 'grid';
-    attempt();
-
     return {
       get done() { return p; },
       skip: function () {
@@ -1019,9 +1049,9 @@
   function playCine(stage, tk) {
     cine.hidden = false;
     cineVideo.src = absUrl(stage.video);
-    cineVideo.muted = CFG.video.muted !== false;
+    cineVideo.muted = false;
     cineVideo.loop = !!CFG.video.loop;
-    cinePlay.hidden = true;
+    cinePlay.hidden = false;
     var done = false;
     return new Promise(function (resolve) {
       function finish() {
@@ -1034,21 +1064,19 @@
       }
       cineSkip.onclick = finish;
       cinePlay.onclick = function () {
+        cineVideo.muted = false;
         cinePlay.hidden = true;
         setRate(cineVideo);
         playOut(cineVideo, function () { cinePlay.hidden = false; });
       };
       cineVideo.onclick = function () {
-        if (cineVideo.paused) cinePlay.onclick();
-        else { try { cineVideo.pause(); } catch (e) { /* 忽略 */ } cinePlay.hidden = false; }
+        if (!cineVideo.paused) {
+          try { cineVideo.pause(); } catch (e) { /* ignore */ }
+        }
+        cinePlay.hidden = false;
       };
       cineVideo.onended = finish;
       step = { skip: finish };
-      later(300, tk).then(function (ok) {
-        if (!ok || done) return;
-        setRate(cineVideo);
-        playOut(cineVideo, function () { cinePlay.hidden = false; });
-      });
     });
   }
 

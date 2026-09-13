@@ -537,13 +537,14 @@ svg{display:block;}
 }
 .video-frame video{width:100%;height:100%;object-fit:contain;display:block;background:#1b0b11;}
 .video-play{
-  position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;
+  position:absolute;left:50%;top:50%;width:94px;height:58px;margin:-29px 0 0 -47px;
   display:grid;place-items:center;border-radius:50%;
   background:rgba(255,20,60,.5);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   animation:glowPulse 2.4s ease-in-out infinite;
 }
-.video-play svg{width:26px;height:26px;fill:#fff;margin-left:3px;}
+.video-play svg{width:22px;height:22px;fill:#fff;margin-left:2px;z-index:1;}
+.video-play-label{position:relative;z-index:1;color:#fff;font-size:13px;letter-spacing:.14em;}
 .vp-ring{position:absolute;inset:-9px;border-radius:50%;border:1px solid rgba(255,180,195,.6);}
 .video-sound{
   position:absolute;right:8px;bottom:8px;width:30px;height:30px;border-radius:50%;
