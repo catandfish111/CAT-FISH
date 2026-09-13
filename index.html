@@ -71,9 +71,43 @@
     </main>
     <button class="bubu-pet" id="bubuPet" type="button" aria-label="和布布互动" title="和布布互动">
       <span class="bubu-pet-glow" aria-hidden="true"></span>
-      <img src="assets/bubu-idle.gif" alt="布布" draggable="false">
+      <img id="bubuImage" src="assets/bubu-idle.gif" alt="布布" draggable="false">
       <span class="bubu-pet-note" aria-hidden="true">布布陪着你</span>
     </button>
+    <div class="bubu-action-chip" id="bubuActionChip" aria-live="polite">安静待机</div>
+    <div class="bubu-countdown" id="bubuCountdown" hidden aria-live="polite">
+      <span id="bubuCountdownMode">专注</span>
+      <strong id="bubuCountdownClock">25:00</strong>
+    </div>
+    <div class="bubu-note-widget" id="bubuNoteWidget" hidden>
+      <span class="bubu-note-pin">♡</span>
+      <p id="bubuNoteText"></p>
+      <button type="button" id="bubuNoteClose" aria-label="收起便签" title="收起便签">×</button>
+    </div>
+    <section class="bubu-feature-panel" id="bubuFeaturePanel" hidden aria-label="布布功能栏">
+      <header class="bubu-panel-head">
+        <div>
+          <span class="bubu-panel-kicker">BUBU ROOM</span>
+          <h2 id="bubuPanelTitle">布布动作库</h2>
+        </div>
+        <button class="bubu-panel-close" id="bubuPanelClose" type="button" aria-label="关闭功能栏" title="关闭功能栏">×</button>
+      </header>
+      <div class="bubu-panel-tabs" role="tablist" aria-label="布布功能">
+        <button type="button" data-bubu-panel="actions">动作</button>
+        <button type="button" data-bubu-panel="notes">便签</button>
+        <button type="button" data-bubu-panel="timer">番茄钟</button>
+        <button type="button" data-bubu-panel="reminders">提醒</button>
+        <button type="button" data-bubu-panel="shortcuts">快捷</button>
+        <button type="button" data-bubu-panel="settings">设置</button>
+      </div>
+      <div class="bubu-panel-body" id="bubuPanelBody"></div>
+    </section>
+    <div class="bubu-context" id="bubuContext" hidden role="menu" aria-label="布布菜单">
+      <button type="button" data-bubu-panel="actions">动作库</button>
+      <button type="button" data-bubu-panel="notes">便签</button>
+      <button type="button" data-bubu-panel="timer">番茄钟</button>
+      <button type="button" data-bubu-panel="settings">设置</button>
+    </div>
     <nav class="space-nav" aria-label="空间导航">
       <button class="space-nav-item is-active" type="button"><span>⌂</span><small>首页</small></button>
       <button class="space-nav-item" type="button" data-space-tool="memories"><span>♡</span><small>回忆</small></button>

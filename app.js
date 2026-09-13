@@ -103,32 +103,393 @@
 
   if (openLetter) openLetter.addEventListener('click', enterLetter);
   if (spaceBack) spaceBack.addEventListener('click', returnToSpace);
-  if (spaceMenu) spaceMenu.addEventListener('click', function () { showSpaceToast('空间设置会在下一步开放'); });
-  if (bubuPet) {
-    bubuPet.addEventListener('click', function (e) {
-      e.stopPropagation();
-      bubuPet.classList.remove('is-happy');
-      void bubuPet.offsetWidth;
-      bubuPet.classList.add('is-happy');
-      showSpaceToast('布布陪着你');
-      if (sound && sound.pop) sound.pop();
-      var bubuRect = bubuPet.getBoundingClientRect ? bubuPet.getBoundingClientRect() : null;
-      if (bubuRect && fx && fx.burstAt) fx.burstAt(bubuRect.left + bubuRect.width * .5, bubuRect.top + bubuRect.height * .42, 'heart', 10);
-      setTimeout(function () { bubuPet.classList.remove('is-happy'); }, 760);
+  /* ---------------- 布布网页端控制台 ----------------
+     参考桌宠的窗口能力在网页里落成可触摸的动作库和工具面板。 */
+  var bubuImage = $('bubuImage');
+  var bubuActionChip = $('bubuActionChip');
+  var bubuCountdown = $('bubuCountdown');
+  var bubuCountdownMode = $('bubuCountdownMode');
+  var bubuCountdownClock = $('bubuCountdownClock');
+  var bubuFeaturePanel = $('bubuFeaturePanel');
+  var bubuPanelTitle = $('bubuPanelTitle');
+  var bubuPanelBody = $('bubuPanelBody');
+  var bubuPanelClose = $('bubuPanelClose');
+  var bubuContext = $('bubuContext');
+  var bubuNoteWidget = $('bubuNoteWidget');
+  var bubuNoteText = $('bubuNoteText');
+  var bubuNoteClose = $('bubuNoteClose');
+  var BUBU_STORE = 'catfish-bubu-room-v1';
+  var BUBU_FALLBACK = 'assets/bubu-idle.gif';
+  var BUBU_ACTIONS = [
+    ['一二咬布布.gif', '咬一口布布，今天也要黏在一起。'],
+    ['一二布布最最好.gif', '你们两个当然是最最好。'],
+    ['一二布布跳舞.gif', '跳一支只属于我们的舞。'],
+    ['一二白眼.gif', '哼，这个表情只给你看。'],
+    ['一二贴贴布布.gif', '贴贴，距离再近一点。'],
+    ['一二走路.gif', '一起走走，去看看今天的风。'],
+    ['一二遛狗.gif', '牵好绳子，出门散步啦。'],
+    ['举牌一二.gif', '我有一句话想举给你看。'],
+    ['化妆一二.gif', '认真打扮一下，去见喜欢的人。'],
+    ['吃汉堡一二.gif', '今天也要好好吃饭。'],
+    ['吃辣条一二.gif', '偷偷分享一根辣条。'],
+    ['喝奶茶一二.gif', '奶茶要两杯，快乐要双份。'],
+    ['孙悟空一二，猪八戒布布.gif', '今天也要一起闯关。'],
+    ['安静一二（待机）.gif', '安安静静陪着你。'],
+    ['开心一二.gif', '戳到我啦，开心一下。'],
+    ['开车一二宝.gif', '上车，带你去兜风。'],
+    ['打扫卫生一二.gif', '把小空间收拾得亮晶晶。'],
+    ['敲鼓布布.gif', '咚咚咚，给你打节拍。'],
+    ['无聊一二.gif', '有一点无聊，想找你玩。'],
+    ['洗澡一二.gif', '洗香香，再来陪你。'],
+    ['涂口红一二.gif', '今天的可爱也要认真准备。'],
+    ['玩手机一二.gif', '刷到什么有趣的，记得分享给我。'],
+    ['生气一二.gif', '生气三秒，还是舍不得你。'],
+    ['看书一二.gif', '陪你安静读一会儿。'],
+    ['睡觉一二.gif', '晚安，做个甜甜的梦。'],
+    ['睡觉觉一二.gif', '困困了，靠着你睡一会儿。'],
+    ['离家出走一二.gif', '我走两步就会想你。'],
+    ['荡秋千一二.gif', '荡到最高处，把心事告诉风。'],
+    ['记录一二.gif', '把今天也记进我们的回忆。'],
+    ['跳草裙舞一二.gif', '海风来了，跳起来。'],
+    ['蹦蹦跳跳一二.gif', '蹦蹦跳跳，烦恼都甩掉。'],
+    ['躺床上玩手机一二.gif', '今天就窝在被子里陪你。'],
+    ['锻炼一二.gif', '一起动一动，精神满满。'],
+    ['鬼脸.gif', '略略略，抓到我的小鬼脸了吗。']
+  ].map(function (item, index) { return { file: item[0], quote: item[1], index: index }; });
+
+  var bubuData = {
+    note: '', notePinned: false, reminders: [],
+    timer: { running: false, mode: 'focus', duration: 1500, remaining: 1500, endsAt: 0 },
+    settings: { quiet: false, auto: true, bubbles: true, sound: true }
+  };
+  try {
+    var storedBubu = JSON.parse(localStorage.getItem(BUBU_STORE) || 'null');
+    if (storedBubu && typeof storedBubu === 'object') {
+      bubuData.note = typeof storedBubu.note === 'string' ? storedBubu.note : '';
+      bubuData.notePinned = !!storedBubu.notePinned;
+      bubuData.reminders = Array.isArray(storedBubu.reminders) ? storedBubu.reminders : [];
+      bubuData.timer = Object.assign(bubuData.timer, storedBubu.timer || {});
+      bubuData.settings = Object.assign(bubuData.settings, storedBubu.settings || {});
+    }
+  } catch (e) { /* 本地存储不可用时继续使用内存数据 */ }
+
+  function saveBubuData() {
+    try { localStorage.setItem(BUBU_STORE, JSON.stringify(bubuData)); } catch (e) { /* 忽略 */ }
+  }
+  function bubuAsset(file) {
+    return 'https://github.com/xiaotianwa/12bubu/raw/refs/heads/main/img/' + encodeURIComponent(file);
+  }
+  function escapeBubuHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
     });
   }
-  var spaceTools = document.querySelectorAll('[data-space-tool]');
-  for (var spaceIndex = 0; spaceIndex < spaceTools.length; spaceIndex++) {
-    (function (button) {
-      button.addEventListener('click', function () {
-      var label = button.getAttribute('data-space-tool');
-      if (label === 'memories') showSpaceToast('回忆盒子正在为你们准备中');
-      else if (label === 'calendar') showSpaceToast('重要的日子，值得被认真记住');
-      else if (label === 'wishes') showSpaceToast('把想一起完成的事，慢慢写下来');
-      else showSpaceToast('这个空间会慢慢长出更多故事');
-      });
-    })(spaceTools[spaceIndex]);
+  function formatBubuSeconds(value) {
+    var seconds = Math.max(0, Math.floor(Number(value) || 0));
+    return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
   }
+  function bubuTimerRemaining() {
+    if (!bubuData.timer.running) return bubuData.timer.remaining;
+    return Math.max(0, Math.ceil((bubuData.timer.endsAt - Date.now()) / 1000));
+  }
+  function updateBubuCountdown() {
+    var runningTimer = !!bubuData.timer.running;
+    if (bubuCountdown) bubuCountdown.hidden = !runningTimer;
+    if (!runningTimer) return;
+    if (bubuCountdownMode) bubuCountdownMode.textContent = bubuData.timer.mode === 'break' ? '休息' : '专注';
+    if (bubuCountdownClock) bubuCountdownClock.textContent = formatBubuSeconds(bubuTimerRemaining());
+  }
+  function setBubuImage(action) {
+    if (!bubuImage || !action) return;
+    bubuImage.alt = action.file.replace(/\.gif$/i, '');
+    bubuImage.onerror = function () {
+      bubuImage.onerror = null;
+      bubuImage.src = BUBU_FALLBACK;
+    };
+    bubuImage.src = bubuAsset(action.file) + '?v=' + Date.now();
+  }
+  function showBubuAction(action, quote, duration) {
+    action = action || BUBU_ACTIONS[13];
+    setBubuImage(action);
+    if (bubuActionChip) bubuActionChip.textContent = action.file.replace(/\.gif$/i, '');
+    if (bubuPet) {
+      bubuPet.classList.remove('is-happy', 'is-action');
+      void bubuPet.offsetWidth;
+      bubuPet.classList.add('is-action');
+    }
+    var note = bubuPet ? bubuPet.querySelector('.bubu-pet-note') : null;
+    if (note) note.textContent = quote || action.quote || '布布陪着你';
+    if (sound && sound.pop) sound.pop();
+    var rect = bubuPet && bubuPet.getBoundingClientRect ? bubuPet.getBoundingClientRect() : null;
+    if (rect && fx && fx.burstAt && bubuData.settings.bubbles) fx.burstAt(rect.left + rect.width * .5, rect.top + rect.height * .42, 'heart', 12);
+    if (bubuPet) {
+      bubuPet.classList.add('is-happy');
+      setTimeout(function () { bubuPet.classList.remove('is-happy'); }, 760);
+    }
+    if (duration) setTimeout(function () {
+      if (bubuData.settings.auto && !bubuFeaturePanel || !bubuFeaturePanel || bubuFeaturePanel.hidden) showBubuAction(BUBU_ACTIONS[13], '安安静静陪着你。');
+    }, duration);
+  }
+  function renderBubuNoteWidget() {
+    if (!bubuNoteWidget) return;
+    if (bubuData.notePinned && bubuData.note.trim()) {
+      bubuNoteWidget.hidden = false;
+      if (bubuNoteText) bubuNoteText.textContent = bubuData.note;
+    } else bubuNoteWidget.hidden = true;
+  }
+  function bubuCurrentPanel() {
+    return bubuFeaturePanel && bubuFeaturePanel.getAttribute('data-panel') || 'actions';
+  }
+  function renderBubuPanel(panel) {
+    if (!bubuPanelBody || !bubuPanelTitle) return;
+    panel = panel || bubuCurrentPanel();
+    var titles = { actions: '布布动作库', notes: '便签', timer: '番茄钟', reminders: '提醒', shortcuts: '快捷启动', settings: '设置' };
+    bubuPanelTitle.textContent = titles[panel] || titles.actions;
+    if (bubuFeaturePanel) bubuFeaturePanel.setAttribute('data-panel', panel);
+    var tabs = document.querySelectorAll('[data-bubu-panel]');
+    for (var t = 0; t < tabs.length; t++) tabs[t].classList.toggle('is-active', tabs[t].getAttribute('data-bubu-panel') === panel);
+    if (panel === 'actions') {
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>全部动作</span><small>点选后布布会立刻换装</small></div><div class="bubu-action-grid">' +
+        BUBU_ACTIONS.map(function (action, index) {
+          return '<button class="bubu-action-item" type="button" data-bubu-action="' + index + '"><img src="' + bubuAsset(action.file) + '" alt="' + escapeBubuHtml(action.file) + '"><span>' + escapeBubuHtml(action.file.replace(/\.gif$/i, '')) + '</span></button>';
+        }).join('') + '</div>';
+    } else if (panel === 'notes') {
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>留一句给彼此</span><small>内容保存在这台设备的浏览器里</small></div><textarea class="bubu-field bubu-note-field" id="bubuNoteInput" rows="5" placeholder="写下今天想说的话……">' + escapeBubuHtml(bubuData.note) + '</textarea><div class="bubu-form-actions"><button class="bubu-primary" type="button" data-bubu-note-save>保存便签</button><button type="button" data-bubu-note-pin>' + (bubuData.notePinned ? '取消贴在首页' : '贴在首页') + '</button></div>';
+    } else if (panel === 'timer') {
+      var timerRemaining = bubuTimerRemaining();
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>一起专注一会儿</span><small>完成后布布会送你一段庆祝动作</small></div><div class="bubu-timer-card"><span class="bubu-timer-mode">' + (bubuData.timer.mode === 'break' ? '休息中' : '专注中') + '</span><strong id="bubuTimerClock">' + formatBubuSeconds(timerRemaining) + '</strong><label>分钟 <input class="bubu-number" id="bubuTimerMinutes" type="number" min="1" max="120" value="' + Math.max(1, Math.round((bubuData.timer.duration || 1500) / 60)) + '"></label></div><div class="bubu-form-actions"><button class="bubu-primary" type="button" data-bubu-timer-toggle>' + (bubuData.timer.running ? '暂停' : '开始') + '</button><button type="button" data-bubu-timer-reset>重置</button></div>';
+    } else if (panel === 'reminders') {
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>温柔提醒</span><small>打开页面时会检查到期提醒</small></div><div class="bubu-reminder-form"><input class="bubu-field" id="bubuReminderText" type="text" placeholder="提醒内容"><input class="bubu-field" id="bubuReminderTime" type="datetime-local"><button class="bubu-primary" type="button" data-bubu-reminder-add>添加提醒</button></div><div class="bubu-reminder-list">' + (bubuData.reminders.length ? bubuData.reminders.map(function (item, index) { return '<div class="bubu-reminder-row"><span>' + escapeBubuHtml(item.text) + '<small>' + escapeBubuHtml(new Date(item.at).toLocaleString()) + '</small></span><button type="button" data-bubu-reminder-remove="' + index + '" aria-label="删除提醒">×</button></div>'; }).join('') : '<p class="bubu-empty">还没有提醒，给未来的你留一句话吧。</p>') + '</div>';
+    } else if (panel === 'shortcuts') {
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>常用入口</span><small>把情侣空间里常用的事放在一起</small></div><div class="bubu-shortcut-list"><button type="button" data-bubu-shortcut="letter"><span>✉</span><b>写给你的信</b><small>打开分页信件</small></button><button type="button" data-bubu-shortcut="notes"><span>♡</span><b>留一句便签</b><small>记下今天的心情</small></button><button type="button" data-bubu-shortcut="random"><span>✦</span><b>随机动作</b><small>让布布自己选一个</small></button><button type="button" data-bubu-shortcut="wishes"><span>＋</span><b>愿望清单</b><small>把想一起做的事写下来</small></button></div>';
+    } else {
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>布布偏好</span><small>调整后会自动保存在浏览器里</small></div><label class="bubu-setting"><span><b>安静模式</b><small>暂停自动动作和背景提示</small></span><input type="checkbox" data-bubu-setting="quiet" ' + (bubuData.settings.quiet ? 'checked' : '') + '></label><label class="bubu-setting"><span><b>自动待机轮换</b><small>让布布偶尔走路、跳舞和休息</small></span><input type="checkbox" data-bubu-setting="auto" ' + (bubuData.settings.auto ? 'checked' : '') + '></label><label class="bubu-setting"><span><b>爱心粒子</b><small>互动时撒出小爱心</small></span><input type="checkbox" data-bubu-setting="bubbles" ' + (bubuData.settings.bubbles ? 'checked' : '') + '></label><label class="bubu-setting"><span><b>轻音效</b><small>互动时播放轻轻的提示音</small></span><input type="checkbox" data-bubu-setting="sound" ' + (bubuData.settings.sound ? 'checked' : '') + '></label>';
+    }
+    updateBubuCountdown();
+  }
+  function openBubuPanel(panel) {
+    if (!bubuFeaturePanel) return;
+    if (bubuContext) bubuContext.hidden = true;
+    bubuFeaturePanel.hidden = false;
+    bubuFeaturePanel.classList.remove('is-opening');
+    void bubuFeaturePanel.offsetWidth;
+    bubuFeaturePanel.classList.add('is-opening');
+    renderBubuPanel(panel || 'actions');
+  }
+  function closeBubuPanel() {
+    if (bubuFeaturePanel) bubuFeaturePanel.hidden = true;
+    if (bubuContext) bubuContext.hidden = true;
+  }
+  function randomBubuAction() {
+    return BUBU_ACTIONS[Math.floor(Math.random() * BUBU_ACTIONS.length)];
+  }
+  function triggerBubuReminder(item) {
+    showBubuAction(BUBU_ACTIONS[7], item.text, 5200);
+    showSpaceToast('布布提醒你：' + item.text);
+  }
+  function checkBubuReminders() {
+    var now = Date.now(), changed = false;
+    for (var r = 0; r < bubuData.reminders.length; r++) {
+      var reminder = bubuData.reminders[r];
+      if (!reminder.done && Number(reminder.at) <= now) {
+        reminder.done = true;
+        changed = true;
+        triggerBubuReminder(reminder);
+      }
+    }
+    if (changed) { saveBubuData(); if (!bubuFeaturePanel || bubuCurrentPanel() !== 'reminders') return; renderBubuPanel('reminders'); }
+  }
+  function bubuTimerTick() {
+    if (bubuData.timer.running) {
+      var remain = bubuTimerRemaining();
+      bubuData.timer.remaining = remain;
+      if (remain <= 0) {
+        bubuData.timer.running = false;
+        bubuData.timer.remaining = 0;
+        saveBubuData();
+        showBubuAction(BUBU_ACTIONS[14], '完成啦，给你一个开心的抱抱。', 4200);
+        showSpaceToast('番茄钟完成，休息一下吧');
+        if (!bubuFeaturePanel || bubuCurrentPanel() === 'timer') renderBubuPanel('timer');
+      }
+    }
+    updateBubuCountdown();
+    var timerClock = $('bubuTimerClock');
+    if (timerClock) timerClock.textContent = formatBubuSeconds(bubuTimerRemaining());
+  }
+  function bubuStartTimer() {
+    var minutesInput = $('bubuTimerMinutes');
+    if (minutesInput && !bubuData.timer.running) bubuData.timer.duration = clamp(Number(minutesInput.value) * 60 || 1500, 60, 7200);
+    if (bubuData.timer.remaining <= 0 || bubuData.timer.remaining > bubuData.timer.duration) bubuData.timer.remaining = bubuData.timer.duration;
+    bubuData.timer.endsAt = Date.now() + bubuData.timer.remaining * 1000;
+    bubuData.timer.running = true;
+    saveBubuData();
+    showBubuAction(BUBU_ACTIONS[28], '布布陪你专心完成这一小段。');
+    renderBubuPanel('timer');
+  }
+  function bubuPauseTimer() {
+    bubuData.timer.remaining = bubuTimerRemaining();
+    bubuData.timer.running = false;
+    saveBubuData();
+    renderBubuPanel('timer');
+  }
+  function bubuResetTimer() {
+    var minutesInput = $('bubuTimerMinutes');
+    var duration = minutesInput ? clamp(Number(minutesInput.value) * 60 || bubuData.timer.duration, 60, 7200) : bubuData.timer.duration;
+    bubuData.timer.duration = duration;
+    bubuData.timer.remaining = duration;
+    bubuData.timer.running = false;
+    saveBubuData();
+    renderBubuPanel('timer');
+  }
+
+  if (bubuFeaturePanel) bubuFeaturePanel.addEventListener('click', function (e) {
+    var actionButton = e.target.closest ? e.target.closest('[data-bubu-action]') : null;
+    if (actionButton) {
+      var action = BUBU_ACTIONS[Number(actionButton.getAttribute('data-bubu-action'))] || BUBU_ACTIONS[13];
+      showBubuAction(action, action.quote);
+      closeBubuPanel();
+      return;
+    }
+    if (e.target.closest && e.target.closest('[data-bubu-note-save]')) {
+      var noteInput = $('bubuNoteInput');
+      bubuData.note = noteInput ? noteInput.value.trim() : bubuData.note;
+      bubuData.notePinned = true;
+      saveBubuData(); renderBubuNoteWidget(); showSpaceToast('便签已经贴在首页啦'); return;
+    }
+    if (e.target.closest && e.target.closest('[data-bubu-note-pin]')) {
+      var input = $('bubuNoteInput');
+      if (input) bubuData.note = input.value.trim();
+      bubuData.notePinned = !bubuData.notePinned;
+      saveBubuData(); renderBubuNoteWidget(); renderBubuPanel('notes'); return;
+    }
+    if (e.target.closest && e.target.closest('[data-bubu-timer-toggle]')) {
+      if (bubuData.timer.running) bubuPauseTimer(); else bubuStartTimer(); return;
+    }
+    if (e.target.closest && e.target.closest('[data-bubu-timer-reset]')) { bubuResetTimer(); return; }
+    if (e.target.closest && e.target.closest('[data-bubu-reminder-add]')) {
+      var textInput = $('bubuReminderText'), timeInput = $('bubuReminderTime');
+      if (!textInput || !textInput.value.trim() || !timeInput || !timeInput.value) { showSpaceToast('把提醒内容和时间都填好哦'); return; }
+      bubuData.reminders.push({ text: textInput.value.trim(), at: new Date(timeInput.value).getTime(), done: false });
+      saveBubuData(); renderBubuPanel('reminders'); showSpaceToast('提醒收好啦'); return;
+    }
+    var removeReminder = e.target.closest ? e.target.closest('[data-bubu-reminder-remove]') : null;
+    if (removeReminder) { bubuData.reminders.splice(Number(removeReminder.getAttribute('data-bubu-reminder-remove')), 1); saveBubuData(); renderBubuPanel('reminders'); return; }
+    var shortcut = e.target.closest ? e.target.closest('[data-bubu-shortcut]') : null;
+    if (shortcut) {
+      var shortcutName = shortcut.getAttribute('data-bubu-shortcut');
+      if (shortcutName === 'letter') { closeBubuPanel(); enterLetter(); }
+      else if (shortcutName === 'notes') renderBubuPanel('notes');
+      else if (shortcutName === 'random') { showBubuAction(randomBubuAction()); closeBubuPanel(); }
+      else { closeBubuPanel(); showSpaceToast('愿望清单会和你们的故事一起长大'); }
+    }
+  });
+  if (bubuFeaturePanel) bubuFeaturePanel.addEventListener('change', function (e) {
+    var input = e.target.closest ? e.target.closest('[data-bubu-setting]') : null;
+    if (!input) return;
+    var key = input.getAttribute('data-bubu-setting');
+    bubuData.settings[key] = !!input.checked;
+    saveBubuData();
+    if (key === 'quiet') bubuActionChip.textContent = input.checked ? '安静模式' : '安静待机';
+    if (key === 'sound' && typeof sound !== 'undefined') { if (input.checked) sound.enable(); else sound.disable(); syncSoundButton(); }
+    showSpaceToast(input.checked ? '已打开' : '已关闭');
+  });
+  var bubuTabButtons = document.querySelectorAll('[data-bubu-panel]');
+  for (var bubuTabIndex = 0; bubuTabIndex < bubuTabButtons.length; bubuTabIndex++) (function (button) {
+    button.addEventListener('click', function (e) { e.stopPropagation(); openBubuPanel(button.getAttribute('data-bubu-panel')); });
+  })(bubuTabButtons[bubuTabIndex]);
+  /* 捕获阶段兜底，避免页面其它点击逻辑影响功能栏切换。 */
+  document.addEventListener('click', function (e) {
+    var panelButton = e.target && e.target.closest ? e.target.closest('[data-bubu-panel]') : null;
+    if (!panelButton || !panelButton.closest('#bubuFeaturePanel,#bubuContext')) return;
+    e.preventDefault();
+    openBubuPanel(panelButton.getAttribute('data-bubu-panel'));
+  }, true);
+  if (bubuPanelClose) bubuPanelClose.addEventListener('click', closeBubuPanel);
+  if (bubuNoteClose) bubuNoteClose.addEventListener('click', function () { bubuData.notePinned = false; saveBubuData(); renderBubuNoteWidget(); });
+  if (spaceMenu) spaceMenu.addEventListener('click', function () { openBubuPanel('settings'); });
+  if (bubuContext) bubuContext.addEventListener('click', function (e) { var button = e.target.closest ? e.target.closest('[data-bubu-panel]') : null; if (button) openBubuPanel(button.getAttribute('data-bubu-panel')); });
+  document.addEventListener('click', function (e) {
+    if (bubuContext && !bubuContext.hidden && !e.target.closest('#bubuContext,#bubuPet')) bubuContext.hidden = true;
+  });
+
+  var spaceTools = document.querySelectorAll('[data-space-tool]');
+  for (var spaceIndex = 0; spaceIndex < spaceTools.length; spaceIndex++) (function (button) {
+    button.addEventListener('click', function () {
+      var label = button.getAttribute('data-space-tool');
+      var target = { memories: 'notes', calendar: 'reminders', wishes: 'shortcuts', settings: 'settings' }[label];
+      if (target) openBubuPanel(target); else showSpaceToast('这个空间会慢慢长出更多故事');
+    });
+  })(spaceTools[spaceIndex]);
+
+  var bubuClickTimer = 0, bubuLongTimer = 0, bubuLongTriggered = false, bubuSuppressClick = false, bubuDrag = null;
+  function clearBubuLongTimer() { if (bubuLongTimer) { clearTimeout(bubuLongTimer); bubuLongTimer = 0; } }
+  function placeBubu(left, top) {
+    if (!bubuPet || !spaceHome) return;
+    var homeRect = spaceHome.getBoundingClientRect(), petRect = bubuPet.getBoundingClientRect();
+    var maxLeft = Math.max(8, homeRect.width - petRect.width - 8), maxTop = Math.max(8, homeRect.height - petRect.height - 8);
+    left = clamp(left, 8, maxLeft); top = clamp(top, 8, maxTop);
+    bubuPet.style.right = 'auto'; bubuPet.style.bottom = 'auto';
+    bubuPet.style.left = left + 'px'; bubuPet.style.top = top + 'px';
+  }
+  function bubuInertia(vx, vy) {
+    if (!bubuPet || !bubuDrag) return;
+    var homeRect = spaceHome.getBoundingClientRect(), petRect = bubuPet.getBoundingClientRect();
+    var left = petRect.left - homeRect.left, top = petRect.top - homeRect.top, frame = 0;
+    function move() {
+      vx *= .88; vy *= .88; left += vx * 16; top += vy * 16; placeBubu(left, top); frame += 1;
+      if (frame < 28 && (Math.abs(vx) > .08 || Math.abs(vy) > .08)) requestAnimationFrame(move);
+    }
+    if (Math.abs(vx) > .08 || Math.abs(vy) > .08) requestAnimationFrame(move);
+  }
+  function openBubuContext(e) {
+    if (!bubuContext) return;
+    bubuContext.hidden = false;
+    var homeRect = spaceHome.getBoundingClientRect();
+    bubuContext.style.left = clamp(e.clientX - homeRect.left, 12, homeRect.width - 170) + 'px';
+    bubuContext.style.top = clamp(e.clientY - homeRect.top, 12, homeRect.height - 210) + 'px';
+  }
+  if (bubuPet) {
+    setBubuImage(BUBU_ACTIONS[13]);
+    renderBubuNoteWidget();
+    bubuPet.addEventListener('dragstart', function (e) { e.preventDefault(); });
+    bubuPet.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      clearBubuLongTimer();
+      bubuLongTriggered = false;
+      var rect = bubuPet.getBoundingClientRect();
+      bubuDrag = { id: e.pointerId, x: e.clientX, y: e.clientY, lastX: e.clientX, lastY: e.clientY, left: rect.left, top: rect.top, moved: false, vx: 0, vy: 0, at: Date.now() };
+      bubuLongTimer = setTimeout(function () { bubuLongTriggered = true; openBubuPanel('actions'); showSpaceToast('动作栏展开啦'); }, 640);
+      try { bubuPet.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+    });
+    bubuPet.addEventListener('pointermove', function (e) {
+      var drag = bubuDrag; if (!drag || drag.id !== e.pointerId) return;
+      var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.moved && Math.sqrt(dx * dx + dy * dy) < 5) return;
+      clearBubuLongTimer(); drag.moved = true; bubuSuppressClick = true;
+      var now = Date.now(), dt = Math.max(8, now - drag.at); drag.vx = (e.clientX - drag.lastX) / dt; drag.vy = (e.clientY - drag.lastY) / dt; drag.lastX = e.clientX; drag.lastY = e.clientY; drag.at = now;
+      var homeRect = spaceHome.getBoundingClientRect(); placeBubu(drag.left + dx - homeRect.left, drag.top + dy - homeRect.top);
+    });
+    bubuPet.addEventListener('pointerup', function (e) {
+      var drag = bubuDrag; if (!drag || drag.id !== e.pointerId) return;
+      bubuDrag = null; clearBubuLongTimer();
+      if (drag.moved) { showBubuAction(BUBU_ACTIONS[14], '布布站稳啦。'); bubuInertia(drag.vx, drag.vy); setTimeout(function () { bubuSuppressClick = false; }, 40); }
+      else if (bubuLongTriggered) setTimeout(function () { bubuLongTriggered = false; }, 0);
+    });
+    bubuPet.addEventListener('pointercancel', function () { bubuDrag = null; clearBubuLongTimer(); bubuSuppressClick = false; });
+    bubuPet.addEventListener('dblclick', function (e) { e.preventDefault(); e.stopPropagation(); clearBubuLongTimer(); if (bubuClickTimer) { clearTimeout(bubuClickTimer); bubuClickTimer = 0; } openBubuPanel(bubuFeaturePanel && !bubuFeaturePanel.hidden ? 'actions' : 'actions'); });
+    bubuPet.addEventListener('click', function (e) {
+      e.stopPropagation(); clearBubuLongTimer();
+      if (bubuSuppressClick || bubuLongTriggered) { bubuSuppressClick = false; return; }
+      if (bubuClickTimer) clearTimeout(bubuClickTimer);
+      bubuClickTimer = setTimeout(function () { bubuClickTimer = 0; showBubuAction(randomBubuAction()); }, 240);
+    });
+    bubuPet.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); clearBubuLongTimer(); openBubuContext(e); });
+  }
+  setInterval(function () {
+    bubuTimerTick(); checkBubuReminders();
+    if (!bubuData.settings.quiet && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden) && (!app || app.dataset.phase === 'space') && !bubuDrag && Math.random() < .12) showBubuAction(randomBubuAction(), null, 2200);
+  }, 1000);
+  updateBubuCountdown();
 
   /* 延时：token 变了就自动作废 */
   function later(ms, tk) {
