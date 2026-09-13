@@ -120,42 +120,42 @@
   var bubuNoteText = $('bubuNoteText');
   var bubuNoteClose = $('bubuNoteClose');
   var BUBU_STORE = 'catfish-bubu-room-v1';
-  var BUBU_FALLBACK = 'assets/bubu-idle.gif';
+  var BUBU_FALLBACK = 'assets/bubu/idle.gif';
   var BUBU_ACTIONS = [
-    ['一二咬布布.gif', '咬一口布布，今天也要黏在一起。'],
-    ['一二布布最最好.gif', '你们两个当然是最最好。'],
-    ['一二布布跳舞.gif', '跳一支只属于我们的舞。'],
-    ['一二白眼.gif', '哼，这个表情只给你看。'],
-    ['一二贴贴布布.gif', '贴贴，距离再近一点。'],
-    ['一二走路.gif', '一起走走，去看看今天的风。'],
-    ['一二遛狗.gif', '牵好绳子，出门散步啦。'],
-    ['举牌一二.gif', '我有一句话想举给你看。'],
-    ['化妆一二.gif', '认真打扮一下，去见喜欢的人。'],
-    ['吃汉堡一二.gif', '今天也要好好吃饭。'],
-    ['吃辣条一二.gif', '偷偷分享一根辣条。'],
-    ['喝奶茶一二.gif', '奶茶要两杯，快乐要双份。'],
-    ['孙悟空一二，猪八戒布布.gif', '今天也要一起闯关。'],
-    ['安静一二（待机）.gif', '安安静静陪着你。'],
-    ['开心一二.gif', '戳到我啦，开心一下。'],
-    ['开车一二宝.gif', '上车，带你去兜风。'],
-    ['打扫卫生一二.gif', '把小空间收拾得亮晶晶。'],
-    ['敲鼓布布.gif', '咚咚咚，给你打节拍。'],
-    ['无聊一二.gif', '有一点无聊，想找你玩。'],
-    ['洗澡一二.gif', '洗香香，再来陪你。'],
-    ['涂口红一二.gif', '今天的可爱也要认真准备。'],
-    ['玩手机一二.gif', '刷到什么有趣的，记得分享给我。'],
-    ['生气一二.gif', '生气三秒，还是舍不得你。'],
-    ['看书一二.gif', '陪你安静读一会儿。'],
-    ['睡觉一二.gif', '晚安，做个甜甜的梦。'],
-    ['睡觉觉一二.gif', '困困了，靠着你睡一会儿。'],
-    ['离家出走一二.gif', '我走两步就会想你。'],
-    ['荡秋千一二.gif', '荡到最高处，把心事告诉风。'],
-    ['记录一二.gif', '把今天也记进我们的回忆。'],
-    ['跳草裙舞一二.gif', '海风来了，跳起来。'],
-    ['蹦蹦跳跳一二.gif', '蹦蹦跳跳，烦恼都甩掉。'],
-    ['躺床上玩手机一二.gif', '今天就窝在被子里陪你。'],
-    ['锻炼一二.gif', '一起动一动，精神满满。'],
-    ['鬼脸.gif', '略略略，抓到我的小鬼脸了吗。']
+    ['assets/bubu/bite.gif', '咬一口布布，今天也要黏在一起。'],
+    ['assets/bubu/best.gif', '你们两个当然是最最好。'],
+    ['assets/bubu/dance.gif', '跳一支只属于我们的舞。'],
+    ['assets/bubu/side-eye.gif', '哼，这个表情只给你看。'],
+    ['assets/bubu/cuddle.gif', '贴贴，距离再近一点。'],
+    ['assets/bubu/walk.gif', '一起走走，去看看今天的风。'],
+    ['assets/bubu/walk-dog.gif', '牵好绳子，出门散步啦。'],
+    ['assets/bubu/hold-sign.gif', '我有一句话想举给你看。'],
+    ['assets/bubu/makeup.gif', '认真打扮一下，去见喜欢的人。'],
+    ['assets/bubu/burger.gif', '今天也要好好吃饭。'],
+    ['assets/bubu/spicy-strip.gif', '偷偷分享一根辣条。'],
+    ['assets/bubu/milk-tea.gif', '奶茶要两杯，快乐要双份。'],
+    ['assets/bubu/monkey-king.gif', '今天也要一起闯关。'],
+    ['assets/bubu/idle.gif', '安安静静陪着你。'],
+    ['assets/bubu/happy.gif', '戳到我啦，开心一下。'],
+    ['assets/bubu/drive.gif', '上车，带你去兜风。'],
+    ['assets/bubu/clean.gif', '把小空间收拾得亮晶晶。'],
+    ['assets/bubu/drum.gif', '咚咚咚，给你打节拍。'],
+    ['assets/bubu/bored.gif', '有一点无聊，想找你玩。'],
+    ['assets/bubu/bath.gif', '洗香香，再来陪你。'],
+    ['assets/bubu/lipstick.gif', '今天的可爱也要认真准备。'],
+    ['assets/bubu/phone.gif', '刷到什么有趣的，记得分享给我。'],
+    ['assets/bubu/angry.gif', '生气三秒，还是舍不得你。'],
+    ['assets/bubu/reading.gif', '陪你安静读一会儿。'],
+    ['assets/bubu/sleep.gif', '晚安，做个甜甜的梦。'],
+    ['assets/bubu/sleepy.gif', '困困了，靠着你睡一会儿。'],
+    ['assets/bubu/run-away.gif', '我走两步就会想你。'],
+    ['assets/bubu/swing.gif', '荡到最高处，把心事告诉风。'],
+    ['assets/bubu/record.gif', '把今天也记进我们的回忆。'],
+    ['assets/bubu/hula.gif', '海风来了，跳起来。'],
+    ['assets/bubu/hop.gif', '蹦蹦跳跳，烦恼都甩掉。'],
+    ['assets/bubu/bed-phone.gif', '今天就窝在被子里陪你。'],
+    ['assets/bubu/workout.gif', '一起动一动，精神满满。'],
+    ['assets/bubu/funny-face.gif', '略略略，抓到我的小鬼脸了吗。']
   ].map(function (item, index) { return { file: item[0], quote: item[1], index: index }; });
 
   var bubuData = {
@@ -177,8 +177,9 @@
   function saveBubuData() {
     try { localStorage.setItem(BUBU_STORE, JSON.stringify(bubuData)); } catch (e) { /* 忽略 */ }
   }
+  /* 动作图现在是本地文件（assets/bubu/），不再依赖第三方仓库 */
   function bubuAsset(file) {
-    return 'https://github.com/xiaotianwa/12bubu/raw/refs/heads/main/img/' + encodeURIComponent(file);
+    return file;
   }
   function escapeBubuHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
