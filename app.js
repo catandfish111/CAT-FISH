@@ -92,6 +92,7 @@
     if (fx && fx.start) fx.start();
   }
 
+
   function showSpaceToast(message) {
     if (!spaceToast) return;
     spaceToast.textContent = message;
