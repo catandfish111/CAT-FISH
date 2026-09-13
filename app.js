@@ -68,6 +68,7 @@
   var spaceBack = $('spaceBack');
   var spaceToast = $('spaceToast');
   var spaceMenu = $('spaceMenu');
+  var bubuPet = $('bubuPet');
 
   /* ---------------- 流程状态 ---------------- */
   var TOKEN = {};        // 每次开信封换一个，旧流程的回调会自动作废
@@ -103,6 +104,19 @@
   if (openLetter) openLetter.addEventListener('click', enterLetter);
   if (spaceBack) spaceBack.addEventListener('click', returnToSpace);
   if (spaceMenu) spaceMenu.addEventListener('click', function () { showSpaceToast('空间设置会在下一步开放'); });
+  if (bubuPet) {
+    bubuPet.addEventListener('click', function (e) {
+      e.stopPropagation();
+      bubuPet.classList.remove('is-happy');
+      void bubuPet.offsetWidth;
+      bubuPet.classList.add('is-happy');
+      showSpaceToast('布布陪着你');
+      if (sound && sound.pop) sound.pop();
+      var bubuRect = bubuPet.getBoundingClientRect ? bubuPet.getBoundingClientRect() : null;
+      if (bubuRect && fx && fx.burstAt) fx.burstAt(bubuRect.left + bubuRect.width * .5, bubuRect.top + bubuRect.height * .42, 'heart', 10);
+      setTimeout(function () { bubuPet.classList.remove('is-happy'); }, 760);
+    });
+  }
   var spaceTools = document.querySelectorAll('[data-space-tool]');
   for (var spaceIndex = 0; spaceIndex < spaceTools.length; spaceIndex++) {
     (function (button) {

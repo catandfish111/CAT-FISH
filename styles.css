@@ -96,6 +96,17 @@ svg{display:block;}
 .space-nav{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:520px;padding:11px 28px calc(env(safe-area-inset-bottom) + 13px);display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.42);background:rgba(245,253,255,.74);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
 .space-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:52px;color:#7598a4;}.space-nav-item span{font-size:21px;line-height:1;}.space-nav-item small{font-size:10px;letter-spacing:.08em;}.space-nav-item.is-active{color:#e57998;}
 .space-toast{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 86px);transform:translate(-50%,10px);padding:10px 16px;border-radius:999px;white-space:nowrap;font-size:11px;letter-spacing:.06em;color:#fff;background:rgba(45,88,105,.82);opacity:0;pointer-events:none;transition:opacity .25s ease,transform .25s ease;}.space-toast.is-visible{opacity:1;transform:translate(-50%,0);}
+.bubu-pet{position:absolute;z-index:5;right:max(18px,calc((100% - 520px)/2 - 2px));bottom:calc(env(safe-area-inset-bottom) + 82px);width:116px;height:124px;display:grid;place-items:end center;filter:drop-shadow(0 12px 12px rgba(65,111,126,.18));transition:filter .2s ease;}
+.bubu-pet img{position:relative;z-index:2;width:108px;height:108px;object-fit:contain;user-select:none;-webkit-user-drag:none;}
+.bubu-pet-glow{position:absolute;z-index:1;bottom:5px;width:76px;height:18px;border-radius:50%;background:rgba(55,117,141,.16);filter:blur(5px);transition:transform .2s ease,opacity .2s ease;}
+.bubu-pet-note{position:absolute;z-index:3;right:4px;top:-8px;padding:7px 10px;border:1px solid rgba(255,255,255,.85);border-radius:14px 14px 4px 14px;background:rgba(255,255,255,.84);box-shadow:0 7px 16px rgba(70,117,133,.12);color:#527486;font-size:10px;letter-spacing:.04em;white-space:nowrap;opacity:0;transform:translateY(6px) scale(.94);pointer-events:none;transition:opacity .2s ease,transform .2s ease;}
+.bubu-pet-note::after{content:"";position:absolute;right:13px;bottom:-5px;width:9px;height:9px;border-right:1px solid rgba(255,255,255,.85);border-bottom:1px solid rgba(255,255,255,.85);background:rgba(255,255,255,.84);transform:rotate(45deg);}
+.bubu-pet.is-happy{filter:drop-shadow(0 15px 14px rgba(65,111,126,.24));}
+.bubu-pet.is-happy img{animation:bubuBounce .72s cubic-bezier(.22,.8,.32,1);}
+.bubu-pet.is-happy .bubu-pet-glow{animation:bubuShadow .72s ease-out;}
+.bubu-pet.is-happy .bubu-pet-note{opacity:1;transform:translateY(0) scale(1);}
+@keyframes bubuBounce{0%,100%{transform:translateY(0) rotate(0deg)}28%{transform:translateY(-13px) rotate(-3deg)}58%{transform:translateY(1px) rotate(2deg)}78%{transform:translateY(-4px) rotate(-1deg)}}
+@keyframes bubuShadow{0%,100%{transform:scale(1);opacity:1}35%{transform:scale(.78);opacity:.56}70%{transform:scale(1.05);opacity:1}}
 .space-back{position:absolute;z-index:14;top:calc(env(safe-area-inset-top) + 13px);left:16px;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);font-size:22px;opacity:0;pointer-events:none;transition:opacity .3s ease,background .2s ease;}.stage[data-phase="sealed"] .space-back{opacity:1;pointer-events:auto;}.space-back:active{background:rgba(255,255,255,.3);}
 @media (min-width:700px){
   .space-content{width:min(calc(100% - 80px),920px);display:grid;grid-template-columns:minmax(300px,1fr) minmax(380px,1.05fr);align-items:center;gap:64px;padding:4vh 0 132px;}
@@ -105,7 +116,10 @@ svg{display:block;}
   .space-couple-line{justify-content:flex-start;}
   .space-tools{padding-top:5vh;}
   .space-nav{max-width:620px;border:1px solid rgba(255,255,255,.46);border-bottom:0;border-radius:18px 18px 0 0;}
+  .bubu-pet{right:max(30px,calc((100% - 920px)/2 + 8px));bottom:calc(env(safe-area-inset-bottom) + 90px);width:148px;height:150px;}
+  .bubu-pet img{width:138px;height:138px;}
 }
+@media (max-width:380px){.bubu-pet{right:8px;bottom:calc(env(safe-area-inset-bottom) + 78px);width:88px;height:96px;}.bubu-pet img{width:84px;height:84px;}.bubu-pet-glow{width:58px;}.bubu-pet-note{right:0;font-size:9px;padding:6px 8px;}}
 .fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
 .vignette{
   position:absolute;inset:0;pointer-events:none;
