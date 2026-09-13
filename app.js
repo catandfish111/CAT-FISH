@@ -201,7 +201,7 @@
   }
   var bubuActionSeq = 0;
   var bubuLastActionAt = 0;
-  var bubuAutoNextAt = Date.now() + 22000;
+  var bubuAutoNextAt = Date.now() + 45000;
   function setBubuImage(action) {
     if (!bubuImage || !action) return;
     bubuImage.alt = action.file.replace(/\.gif$/i, '');
@@ -495,9 +495,9 @@
   setInterval(function () {
     bubuTimerTick(); checkBubuReminders();
     var now = Date.now();
-    if (now >= bubuAutoNextAt && !bubuData.settings.quiet && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden) && (!app || app.dataset.phase === 'space') && !bubuDrag && now - bubuLastActionAt >= 18000) {
+    if (now >= bubuAutoNextAt && !document.hidden && !bubuData.settings.quiet && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden) && (!app || app.dataset.phase === 'space') && !bubuDrag && now - bubuLastActionAt >= 30000) {
       showBubuAction(randomBubuAction(), null, 2200);
-      bubuAutoNextAt = Date.now() + 22000 + Math.floor(Math.random() * 12000);
+      bubuAutoNextAt = Date.now() + 45000 + Math.floor(Math.random() * 20000);
     }
   }, 1000);
   updateBubuCountdown();
