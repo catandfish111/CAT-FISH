@@ -59,7 +59,32 @@ svg{display:block;}
   perspective:1400px;
   touch-action:manipulation;
 }
-.stage[data-phase="space"]{background:#8bd9f7 url("assets/sky-heart-cloud.svg") center/cover no-repeat;}
+/* 空间页背景：云朵壁纸
+   手机（窄屏）用竖屏版，电脑（宽屏）用横屏版——由媒体查询自动切换，两边都只下一张图
+   底色兜底，图没加载出来也不会白屏 */
+.stage[data-phase="space"]{background:#8bd9f7;}
+.space-bg-img{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:#8bd9f7 url("assets/bg-mobile.jpg") center/cover no-repeat;
+  opacity:1;
+}
+@media (min-width:769px){
+  .space-bg-img{background-image:url("assets/bg-desktop.jpg");}
+}
+/* 上面压一层柔光，保证文字和卡片看得清 */
+.space-bg-scrim{
+  position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,0) 26%),
+    linear-gradient(0deg, rgba(228,246,255,.55) 0%, rgba(228,246,255,0) 42%),
+    radial-gradient(120% 80% at 50% 30%, rgba(255,255,255,.10), rgba(120,180,210,.16) 100%);
+}
+/* 进了信纸就把背景壁纸淡出，专心看信 */
+.stage:not([data-phase="space"]) .space-bg-img,
+.stage:not([data-phase="space"]) .space-bg-scrim{
+  opacity:0;
+  transition:opacity .55s ease;
+}
 .stage[data-phase="space"] .scene-envelope{opacity:0;pointer-events:none;transform:scale(.96);}
 .stage[data-phase="space"] .sound{opacity:0;pointer-events:none;}
 .space-home{
