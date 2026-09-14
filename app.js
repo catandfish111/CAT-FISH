@@ -340,7 +340,7 @@
         bubuData.timer.running = false;
         bubuData.timer.remaining = 0;
         saveBubuData();
-        showBubuAction(BUBU_ACTIONS[14], '完成啦，给你一个开心的抱抱。', 4200);
+        showBubuAction(BUBU_ACTIONS[14], '', 4200);
         showSpaceToast('番茄钟完成，休息一下吧');
         if (!bubuFeaturePanel || bubuCurrentPanel() === 'timer') renderBubuPanel('timer');
       }
@@ -356,7 +356,7 @@
     bubuData.timer.endsAt = Date.now() + bubuData.timer.remaining * 1000;
     bubuData.timer.running = true;
     saveBubuData();
-    showBubuAction(BUBU_ACTIONS[28], '布布陪你专心完成这一小段。');
+    showBubuAction(BUBU_ACTIONS[28], '', 5000);
     renderBubuPanel('timer');
   }
   function bubuPauseTimer() {
@@ -505,7 +505,7 @@
     bubuPet.addEventListener('pointerup', function (e) {
       var drag = bubuDrag; if (!drag || drag.id !== e.pointerId) return;
       bubuDrag = null; clearBubuLongTimer();
-      if (drag.moved) { showBubuAction(BUBU_ACTIONS[14], '布布站稳啦。'); bubuInertia(drag.vx, drag.vy); setTimeout(function () { bubuSuppressClick = false; }, 40); }
+      if (drag.moved) { showBubuAction(BUBU_ACTIONS[14], '', 5000); bubuInertia(drag.vx, drag.vy); setTimeout(function () { bubuSuppressClick = false; }, 40); }
       else if (bubuLongTriggered) setTimeout(function () { bubuLongTriggered = false; }, 0);
     });
     bubuPet.addEventListener('pointercancel', function () { bubuDrag = null; clearBubuLongTimer(); bubuSuppressClick = false; });
