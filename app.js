@@ -120,7 +120,7 @@
   var bubuNoteText = $('bubuNoteText');
   var bubuNoteClose = $('bubuNoteClose');
   var BUBU_STORE = 'catfish-bubu-room-v1';
-  var BUBU_FALLBACK = 'assets/bubu/安静一二（待机）.gif';
+  var BUBU_FALLBACK = 'assets/bubu/idle.gif';
   var BUBU_ACTIONS = [
     ['assets/bubu/一二咬布布.gif', '咬一口布布，今天也要黏在一起。', '咬布布'],
     ['assets/bubu/一二布布最最好.gif', '你们两个当然是最最好。', '最最好'],
@@ -135,7 +135,7 @@
     ['assets/bubu/吃辣条一二.gif', '偷偷分享一根辣条。', '吃辣条'],
     ['assets/bubu/喝奶茶一二.gif', '奶茶要两杯，快乐要双份。', '喝奶茶'],
     ['assets/bubu/孙悟空一二，猪八戒布布.gif', '今天也要一起闯关。', '悟空与八戒'],
-    ['assets/bubu/安静一二（待机）.gif', '安安静静陪着你。', '安静待机'],
+    ['assets/bubu/idle.gif', '安安静静陪着你。', '安静待机'],
     ['assets/bubu/开心一二.gif', '戳到我啦，开心一下。', '开心'],
     ['assets/bubu/开车一二宝.gif', '上车，带你去兜风。', '兜风'],
     ['assets/bubu/打扫卫生一二.gif', '把小空间收拾得亮晶晶。', '打扫卫生'],
@@ -146,7 +146,7 @@
     ['assets/bubu/玩手机一二.gif', '刷到什么有趣的，记得分享给我。', '玩手机'],
     ['assets/bubu/生气一二.gif', '生气三秒，还是舍不得你。', '生气'],
     ['assets/bubu/看书一二.gif', '陪你安静读一会儿。', '看书'],
-    ['assets/bubu/睡觉一二.gif', '晚安，做个甜甜的梦。', '睡觉'],
+    ['assets/bubu/sleep.gif', '晚安，做个甜甜的梦。', '睡觉'],
     ['assets/bubu/睡觉觉一二.gif', '困困了，靠着你睡一会儿。', '困困'],
     ['assets/bubu/离家出走一二.gif', '我走两步就会想你。', '离家出走'],
     ['assets/bubu/荡秋千一二.gif', '荡到最高处，把心事告诉风。', '荡秋千'],
