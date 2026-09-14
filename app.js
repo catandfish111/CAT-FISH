@@ -158,6 +158,12 @@
     ['assets/bubu/鬼脸.gif', '略略略，抓到我的小鬼脸了吗。', '鬼脸']
   ].map(function (item, index) { return { file: item[0], quote: item[1], display: item[2], index: index }; });
 
+  /* 按序号取一个动作（越界就用待机那个） */
+  function bubuActionAt(i) {
+    var a = BUBU_ACTIONS[i];
+    return (a && a.file) ? a : BUBU_ACTIONS[13];
+  }
+
   var bubuData = {
     note: '', notePinned: false, reminders: [],
     timer: { running: false, mode: 'focus', duration: 1500, remaining: 1500, endsAt: 0 },
@@ -220,7 +226,7 @@
     var actionSeq = ++bubuActionSeq;
     bubuLastActionAt = Date.now();
     setBubuImage(action);
-    /* 播放动作时不显示名字——名字只在动作库面板里出现 */
+    /* 播放动作时不显示任何名字/文案——名字只在动作库面板里出现 */
     if (bubuActionChip) bubuActionChip.textContent = '';
     if (bubuPet) {
       bubuPet.classList.remove('is-happy', 'is-action');
@@ -228,7 +234,7 @@
       bubuPet.classList.add('is-action');
     }
     var note = bubuPet ? bubuPet.querySelector('.bubu-pet-note') : null;
-    if (note) note.textContent = quote || action.quote || '布布陪着你';
+    if (note) note.textContent = '';
     if (sound && sound.pop) sound.pop();
     var rect = bubuPet && bubuPet.getBoundingClientRect ? bubuPet.getBoundingClientRect() : null;
     if (rect && fx && fx.burstAt && bubuData.settings.bubbles) fx.burstAt(rect.left + rect.width * .5, rect.top + rect.height * .42, 'heart', 12);
@@ -236,9 +242,23 @@
       bubuPet.classList.add('is-happy');
       setTimeout(function () { bubuPet.classList.remove('is-happy'); }, 760);
     }
+    /* 有 duration 就在到点后回到待机（click 传 5000；自动轮换传 2200） */
     if (duration) setTimeout(function () {
-      if (actionSeq === bubuActionSeq && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden)) showBubuAction(BUBU_ACTIONS[13], '安安静静陪着你。');
+      if (actionSeq !== bubuActionSeq) return;                    /* 已经被别的动作取代了 */
+      if (bubuDrag) return;                                       /* 正在拖，先别打断 */
+      if (bubuFeaturePanel && !bubuFeaturePanel.hidden) return;   /* 面板开着，保持不动 */
+      if (bubuData.settings.quiet) return;                        /* 开了安静模式 */
+      showBubuAction(bubuActionAt(13), '');
     }, duration);
+  }
+  /* 回到待机（不带动画、不发声，只把图换回去） */
+  function bubuIdle() {
+    var idle = BUBU_ACTIONS.filter(function (a) { return a.file === BUBU_FALLBACK; })[0] || bubuActionAt(13);
+    bubuActionSeq += 1;
+    setBubuImage(idle);
+    if (bubuActionChip) bubuActionChip.textContent = '';
+    var note = bubuPet ? bubuPet.querySelector('.bubu-pet-note') : null;
+    if (note) note.textContent = '';
   }
   function renderBubuNoteWidget() {
     if (!bubuNoteWidget) return;
@@ -291,7 +311,10 @@
     if (bubuContext) bubuContext.hidden = true;
   }
   function randomBubuAction() {
-    return BUBU_ACTIONS[Math.floor(Math.random() * BUBU_ACTIONS.length)];
+    /* 随机换动作时不要抽到待机图，否则「点一下」会看着像没反应 */
+    var pool = BUBU_ACTIONS.filter(function (a) { return a.file !== BUBU_FALLBACK; });
+    if (!pool.length) pool = BUBU_ACTIONS;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
   function triggerBubuReminder(item) {
     showBubuAction(BUBU_ACTIONS[7], item.text, 5200);
@@ -491,7 +514,8 @@
       e.stopPropagation(); clearBubuLongTimer();
       if (bubuSuppressClick || bubuLongTriggered) { bubuSuppressClick = false; return; }
       if (bubuClickTimer) clearTimeout(bubuClickTimer);
-      bubuClickTimer = setTimeout(function () { bubuClickTimer = 0; showBubuAction(randomBubuAction()); }, 240);
+      /* 点一下：随机播一个动作，5 秒后自动回到待机 */
+      bubuClickTimer = setTimeout(function () { bubuClickTimer = 0; showBubuAction(randomBubuAction(), '', 5000); }, 240);
     });
     bubuPet.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); clearBubuLongTimer(); openBubuContext(e); });
   }
