@@ -37,6 +37,49 @@ button{font-family:inherit;color:inherit;border:0;background:none;padding:0;
 svg{display:block;}
 [hidden]{display:none !important;}
 
+/* ============================================================
+   空间密码门
+   ============================================================ */
+.access-gate{
+  position:fixed;inset:0;z-index:100;display:grid;place-items:center;
+  padding:24px;
+  background:#dff6ff url("assets/bg-mobile.jpg") center/cover no-repeat;
+  color:#315f70;
+  transition:opacity .48s ease,visibility .48s ease;
+}
+.access-gate::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(228,246,255,.42));pointer-events:none;}
+.access-gate.is-unlocked{opacity:0;visibility:hidden;pointer-events:none;}
+.access-gate-card{
+  position:relative;z-index:1;width:min(100%,380px);padding:34px 28px 27px;text-align:center;
+  border:1px solid rgba(255,255,255,.82);border-radius:18px;
+  background:rgba(255,255,255,.83);
+  box-shadow:0 24px 60px rgba(50,116,139,.2),0 0 0 7px rgba(255,255,255,.2);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.access-heart{width:52px;height:52px;margin:0 auto 15px;display:grid;place-items:center;border-radius:50%;background:#ef789a;color:#fff;font-size:36px;line-height:1;box-shadow:0 10px 22px rgba(226,119,145,.24);}
+.access-kicker{margin:0 0 8px;color:#86aab4;font-size:9px;letter-spacing:.24em;}
+.access-gate-card h1{margin:0;color:#2c5d70;font-size:25px;line-height:1.45;letter-spacing:.06em;}
+.access-copy{margin:10px 0 25px;color:#71909a;font-size:12px;line-height:1.8;letter-spacing:.04em;}
+.access-form{text-align:left;}
+.access-label{display:block;margin:0 0 7px;color:#527887;font-size:11px;letter-spacing:.08em;}
+.access-input-wrap{position:relative;}
+.access-input-wrap input{width:100%;height:46px;padding:0 58px 0 13px;border:1px solid rgba(92,151,165,.26);border-radius:10px;outline:none;background:rgba(255,255,255,.88);color:#315f70;font:inherit;font-size:14px;letter-spacing:.12em;}
+.access-input-wrap input::placeholder{color:#a4b9be;letter-spacing:.04em;}
+.access-input-wrap input:focus{border-color:#e9829d;box-shadow:0 0 0 3px rgba(236,145,167,.13);}
+.access-input-wrap input.is-invalid{animation:accessShake .34s ease;border-color:#e9829d;}
+.access-toggle{position:absolute;right:7px;top:7px;height:32px;padding:0 8px;border-radius:7px;color:#70929c;font-size:11px;}
+.access-toggle:active{background:#f6e0e5;color:#d36f89;}
+.access-submit{width:100%;height:45px;margin-top:12px;padding:0 15px;display:flex;align-items:center;justify-content:space-between;border-radius:10px;background:#e9829d;color:#fff;box-shadow:0 8px 16px rgba(226,119,145,.2);font-size:13px;letter-spacing:.08em;transition:transform .2s ease,background .2s ease;}
+.access-submit b{font-size:21px;font-weight:400;line-height:1;}
+.access-submit:active{transform:scale(.98);background:#df6f8c;}
+.access-error{min-height:20px;margin:9px 0 0;text-align:center;color:#d36f89;font-size:11px;line-height:1.6;}
+.access-footnote{margin:17px 0 0;color:#91aab0;font-size:10px;letter-spacing:.12em;}
+@keyframes accessShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+body:not(.access-unlocked) #app{visibility:hidden;pointer-events:none;}
+body.access-unlocked #app{visibility:visible;}
+@media (min-width:769px){.access-gate{background-image:url("assets/bg-desktop.jpg");}}
+@media (max-width:380px){.access-gate{padding:18px;}.access-gate-card{padding:28px 21px 23px;}.access-gate-card h1{font-size:22px;}}
+
 /* 舞台上所有可点元素，光标都是小爱心 */
 .stage button,
 .stage .big-heart,
@@ -116,7 +159,7 @@ svg{display:block;}
 .space-tool{min-height:104px;padding:15px 13px;text-align:left;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;border:1px solid rgba(255,255,255,.72);border-radius:12px;background:rgba(255,255,255,.64);box-shadow:0 10px 22px rgba(47,113,139,.10);color:#315b6e;transition:transform .2s ease,background .2s ease,box-shadow .2s ease;}
 .space-tool:active{transform:scale(.97);background:rgba(255,255,255,.82);box-shadow:0 5px 12px rgba(47,113,139,.12);}
 .space-tool-primary{grid-column:span 2;min-height:86px;flex-direction:row;align-items:center;gap:12px;background:#fff9f2;border-color:rgba(255,255,255,.9);}
-.tool-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;font-size:20px;color:#fff;flex:0 0 auto;}.tool-icon-letter{background:#ef91a9;}.tool-icon-memory{background:#73c4d2;}.tool-icon-calendar{background:#efb46d;}.tool-icon-wish{background:#9aaddd;}
+.tool-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;font-size:20px;color:#fff;flex:0 0 auto;}.tool-icon-letter{background:#ef91a9;}.tool-icon-memory{background:#73c4d2;}.tool-icon-tools{background:#89a9b3;}.tool-icon-calendar{background:#efb46d;}.tool-icon-wish{background:#9aaddd;}
 .tool-copy{display:flex;flex-direction:column;gap:5px;}.tool-copy b{font-size:14px;letter-spacing:.04em;}.tool-copy small{font-size:10px;letter-spacing:.04em;color:#71909a;}.tool-arrow{margin-left:auto;color:#e77c99;font-size:20px;}
 .space-nav{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:520px;padding:11px 28px calc(env(safe-area-inset-bottom) + 13px);display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.42);background:rgba(245,253,255,.74);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
 .space-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:52px;color:#7598a4;}.space-nav-item span{font-size:21px;line-height:1;}.space-nav-item small{font-size:10px;letter-spacing:.08em;}.space-nav-item.is-active{color:#e57998;}
@@ -177,6 +220,16 @@ svg{display:block;}
 .bubu-panel-body{overflow:auto;padding:14px 15px 17px;scrollbar-width:thin;}
 .bubu-panel-intro{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 2px 12px;color:#315f73;font-size:13px;font-weight:700;letter-spacing:.06em;}
 .bubu-panel-intro small{color:#8ba7ae;font-size:9px;font-weight:400;letter-spacing:0;}
+.bubu-tool-hub{display:grid;gap:8px;}
+.bubu-tool-hub button{position:relative;display:grid;grid-template-columns:38px 1fr 18px;grid-template-rows:auto auto;column-gap:10px;align-items:center;min-height:62px;padding:9px 11px;border:1px solid rgba(99,160,173,.14);border-radius:10px;background:rgba(255,255,255,.72);text-align:left;color:#315f70;transition:transform .18s ease,background .18s ease,box-shadow .18s ease;}
+.bubu-tool-hub button:active{transform:scale(.98);background:#fff;box-shadow:0 5px 12px rgba(71,127,145,.12);}
+.bubu-tool-hub .hub-icon{grid-row:span 2;display:grid;place-items:center;width:36px;height:36px;border-radius:10px;color:#fff;font-size:19px;}
+.hub-icon-actions{background:#e9829d;}.hub-icon-notes{background:#71c5d1;}.hub-icon-timer{background:#e8b06e;}.hub-icon-reminders{background:#9baddc;}.hub-icon-settings{background:#89a9b3;}
+.bubu-tool-hub b{font-size:12px;font-weight:700;}.bubu-tool-hub small{margin-top:3px;color:#8ba4aa;font-size:10px;}.bubu-tool-hub i{grid-column:3;grid-row:span 2;color:#df829b;font-size:18px;font-style:normal;}
+.memory-empty{display:flex;flex-direction:column;align-items:center;padding:22px 20px 19px;text-align:center;border:1px solid rgba(99,160,173,.14);border-radius:12px;background:rgba(255,255,255,.62);}
+.memory-empty-icon{width:50px;height:50px;display:grid;place-items:center;margin-bottom:11px;border-radius:50%;background:#f3c4ce;color:#fff;font-size:30px;line-height:1;box-shadow:0 8px 16px rgba(226,119,145,.16);}
+.memory-empty b{color:#416d79;font-size:13px;letter-spacing:.04em;}.memory-empty p{max-width:240px;margin:9px 0 15px;color:#8aa4aa;font-size:11px;line-height:1.75;}
+.memory-empty .bubu-primary{min-height:35px;padding:7px 13px;border-radius:8px;background:#e9829d;color:#fff;box-shadow:0 6px 12px rgba(226,119,145,.18);font-size:11px;}
 .bubu-action-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
 .bubu-action-item{min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 4px 8px;border:1px solid rgba(103,163,176,.13);border-radius:10px;background:rgba(255,255,255,.64);color:#5a7b87;transition:transform .18s ease,background .18s ease,box-shadow .18s ease;}
 .bubu-action-item:active{transform:scale(.94);background:#fff;box-shadow:0 5px 12px rgba(71,127,145,.15);}

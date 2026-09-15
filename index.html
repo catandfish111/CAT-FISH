@@ -16,6 +16,24 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<section class="access-gate" id="accessGate" aria-labelledby="accessTitle">
+  <div class="access-gate-card">
+    <div class="access-heart" aria-hidden="true">♡</div>
+    <p class="access-kicker">OUR LITTLE SPACE</p>
+    <h1 id="accessTitle">进入我们的空间</h1>
+    <p class="access-copy">输入密码，打开只属于你们的这一页。</p>
+    <form class="access-form" id="accessForm">
+      <label class="access-label" for="accessPassword">空间密码</label>
+      <div class="access-input-wrap">
+        <input id="accessPassword" name="password" type="password" autocomplete="current-password" placeholder="请输入密码" required>
+        <button class="access-toggle" id="accessToggle" type="button" aria-label="显示密码" title="显示密码">显示</button>
+      </div>
+      <button class="access-submit" type="submit"><span>解锁空间</span><b aria-hidden="true">→</b></button>
+      <p class="access-error" id="accessError" role="alert" aria-live="polite"></p>
+    </form>
+    <p class="access-footnote">小鱼和小猫在等你</p>
+  </div>
+</section>
 <div id="app" class="stage" data-phase="space">
 
   <!-- 背景：暖色光晕 + 爱心粒子（canvas） -->
@@ -61,9 +79,9 @@
             <span class="tool-copy"><b>我们的回忆</b><small>照片和故事正在收集</small></span>
             <span class="tool-arrow">→</span>
           </button>
-          <button class="space-tool" type="button" data-space-tool="calendar">
-            <span class="tool-icon tool-icon-calendar">♡</span>
-            <span class="tool-copy"><b>恋爱日历</b><small>重要日子不会忘记</small></span>
+          <button class="space-tool" type="button" data-space-tool="utilities">
+            <span class="tool-icon tool-icon-tools">✧</span>
+            <span class="tool-copy"><b>小工具</b><small>把日常的小事放在一起</small></span>
             <span class="tool-arrow">→</span>
           </button>
           <button class="space-tool" type="button" data-space-tool="wishes">
@@ -89,7 +107,7 @@
       <p id="bubuNoteText"></p>
       <button type="button" id="bubuNoteClose" aria-label="收起便签" title="收起便签">×</button>
     </div>
-    <section class="bubu-feature-panel" id="bubuFeaturePanel" hidden aria-label="布布功能栏">
+    <section class="bubu-feature-panel" id="bubuFeaturePanel" hidden aria-label="空间模块">
       <header class="bubu-panel-head">
         <div>
           <span class="bubu-panel-kicker">BUBU ROOM</span>
@@ -97,12 +115,13 @@
         </div>
         <button class="bubu-panel-close" id="bubuPanelClose" type="button" aria-label="关闭功能栏" title="关闭功能栏">×</button>
       </header>
-      <div class="bubu-panel-tabs" role="tablist" aria-label="布布功能">
+      <div class="bubu-panel-tabs" role="tablist" aria-label="空间模块">
+        <button type="button" data-bubu-panel="hub">总览</button>
+        <button type="button" data-bubu-panel="memories">回忆</button>
         <button type="button" data-bubu-panel="actions">动作</button>
         <button type="button" data-bubu-panel="notes">便签</button>
         <button type="button" data-bubu-panel="timer">番茄钟</button>
         <button type="button" data-bubu-panel="reminders">提醒</button>
-        <button type="button" data-bubu-panel="shortcuts">快捷</button>
         <button type="button" data-bubu-panel="settings">设置</button>
       </div>
       <div class="bubu-panel-body" id="bubuPanelBody"></div>

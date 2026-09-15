@@ -13,6 +13,15 @@ window.LOVE_CONFIG = {
     miniNote: '只给你看'          // 信封里露出的那张小纸条
   },
 
+  /* ---------- 情侣空间访问密码 ----------
+     这是前端密码门，只能阻止普通访问，不能保护 GitHub Pages 源码和资源。
+     修改 password 后刷新页面即可生效；remember 可选 session / local / none。 */
+  access: {
+    enabled: true,
+    password: 'catfish',          // 请改成你们自己的密码
+    remember: 'session'
+  },
+
   /* ---------- 卡通形象 ----------
      cat = 小猫、fish = 小鱼、jar = 装爱心的小罐子
      关掉哪个就把哪个改成 false；enabled:false 是把形象全部关掉。

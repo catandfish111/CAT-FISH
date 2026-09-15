@@ -8,6 +8,7 @@
   /* ---------------- 兜底配置 ---------------- */
   var DEFAULTS = {
     cover: { intro: '写给你的一封信', hint: '轻触这里，打开信封', miniNote: '只给你看' },
+    access: { enabled: true, password: 'catfish', remember: 'session' },
     stages: [{ name: '启封', open: ['你好呀。'], video: '', caption: '', close: [] }],
     ending: { sign: '永远站在你这边的人', replay: '轻触重新看一遍' },
     video: { mode: 'inline', muted: true, loop: false, rate: 0.92, closePause: 1400 },
@@ -69,6 +70,70 @@
   var spaceToast = $('spaceToast');
   var spaceMenu = $('spaceMenu');
   var bubuPet = $('bubuPet');
+
+  /* ---------------- 空间密码门 ----------------
+     GitHub Pages 是静态站点，这里做的是前端访问控制，不是后端鉴权。 */
+  var accessGate = $('accessGate');
+  var accessForm = $('accessForm');
+  var accessPassword = $('accessPassword');
+  var accessError = $('accessError');
+  var accessToggle = $('accessToggle');
+  var accessConfig = CFG.access || {};
+  var accessRemember = accessConfig.remember === 'local' ? 'local' : (accessConfig.remember === 'none' ? 'none' : 'session');
+  var ACCESS_STORAGE_KEY = 'catfish-space-unlocked-v1';
+
+  function accessStorage(kind) {
+    try { return window[kind + 'Storage']; } catch (e) { return null; }
+  }
+  function hasAccessTicket() {
+    if (accessRemember === 'none') return false;
+    var store = accessStorage(accessRemember);
+    try { return !!(store && store.getItem(ACCESS_STORAGE_KEY) === 'yes'); } catch (e) { return false; }
+  }
+  function saveAccessTicket() {
+    if (accessRemember === 'none') return;
+    var store = accessStorage(accessRemember);
+    try { if (store) store.setItem(ACCESS_STORAGE_KEY, 'yes'); } catch (e) { /* 隐私模式可能禁用存储 */ }
+  }
+  function unlockSpace() {
+    document.body.classList.add('access-unlocked');
+    if (accessGate) {
+      accessGate.classList.add('is-unlocked');
+      accessGate.setAttribute('aria-hidden', 'true');
+    }
+    if (app) app.removeAttribute('aria-hidden');
+  }
+  function rejectAccess() {
+    if (!accessError) return;
+    accessError.textContent = '密码不对，再想一想吧。';
+    if (accessPassword) {
+      accessPassword.classList.remove('is-invalid');
+      void accessPassword.offsetWidth;
+      accessPassword.classList.add('is-invalid');
+      accessPassword.focus();
+      accessPassword.select();
+    }
+  }
+  if (!accessConfig.enabled || !String(accessConfig.password || '')) unlockSpace();
+  else if (hasAccessTicket()) unlockSpace();
+  else if (accessPassword) accessPassword.focus();
+  if (accessForm) accessForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var expected = String(accessConfig.password == null ? '' : accessConfig.password);
+    var actual = accessPassword ? accessPassword.value : '';
+    if (actual === expected) {
+      saveAccessTicket();
+      if (accessError) accessError.textContent = '';
+      unlockSpace();
+    } else rejectAccess();
+  });
+  if (accessToggle && accessPassword) accessToggle.addEventListener('click', function () {
+    var visible = accessPassword.type === 'text';
+    accessPassword.type = visible ? 'password' : 'text';
+    accessToggle.textContent = visible ? '显示' : '隐藏';
+    accessToggle.setAttribute('aria-label', visible ? '显示密码' : '隐藏密码');
+    accessToggle.setAttribute('title', visible ? '显示密码' : '隐藏密码');
+  });
 
   /* ---------------- 流程状态 ---------------- */
   var TOKEN = {};        // 每次开信封换一个，旧流程的回调会自动作废
@@ -167,7 +232,7 @@
   var bubuData = {
     note: '', notePinned: false, reminders: [],
     timer: { running: false, mode: 'focus', duration: 1500, remaining: 1500, endsAt: 0 },
-    settings: { quiet: false, auto: true, bubbles: true, sound: true }
+    settings: { quiet: false, auto: false, bubbles: true, sound: true }
   };
   try {
     var storedBubu = JSON.parse(localStorage.getItem(BUBU_STORE) || 'null');
@@ -177,6 +242,12 @@
       bubuData.reminders = Array.isArray(storedBubu.reminders) ? storedBubu.reminders : [];
       bubuData.timer = Object.assign(bubuData.timer, storedBubu.timer || {});
       bubuData.settings = Object.assign(bubuData.settings, storedBubu.settings || {});
+      /* 旧版本默认会自动轮换，升级时只迁移一次，避免打扰正在使用的布布。 */
+      if (!storedBubu.settings || !Object.prototype.hasOwnProperty.call(storedBubu.settings, 'autoExplicit')) {
+        bubuData.settings.auto = false;
+        bubuData.settings.autoExplicit = true;
+        saveBubuData();
+      }
     }
   } catch (e) { /* 本地存储不可用时继续使用内存数据 */ }
 
@@ -273,12 +344,22 @@
   function renderBubuPanel(panel) {
     if (!bubuPanelBody || !bubuPanelTitle) return;
     panel = panel || bubuCurrentPanel();
-    var titles = { actions: '布布动作库', notes: '便签', timer: '番茄钟', reminders: '提醒', shortcuts: '快捷启动', settings: '设置' };
+    var titles = { hub: '小工具', memories: '我们的回忆', actions: '布布动作库', notes: '便签', timer: '番茄钟', reminders: '提醒', shortcuts: '快捷启动', settings: '设置' };
     bubuPanelTitle.textContent = titles[panel] || titles.actions;
     if (bubuFeaturePanel) bubuFeaturePanel.setAttribute('data-panel', panel);
     var tabs = document.querySelectorAll('[data-bubu-panel]');
     for (var t = 0; t < tabs.length; t++) tabs[t].classList.toggle('is-active', tabs[t].getAttribute('data-bubu-panel') === panel);
-    if (panel === 'actions') {
+    if (panel === 'memories') {
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>把日子收好</span><small>属于你们的回忆簿</small></div><div class="memory-empty"><span class="memory-empty-icon">♡</span><b>这里会装下你们的故事</b><p>照片、日期和想起来会微笑的瞬间，都可以慢慢放进来。</p><button type="button" class="bubu-primary" data-memory-coming>开始收集回忆</button></div>';
+    } else if (panel === 'hub') {
+      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>日常小工具</span><small>选择一个功能开始使用</small></div><div class="bubu-tool-hub">' +
+        '<button type="button" data-bubu-panel="actions"><span class="hub-icon hub-icon-actions">✦</span><b>动作</b><small>和布布互动一下</small><i>→</i></button>' +
+        '<button type="button" data-bubu-panel="notes"><span class="hub-icon hub-icon-notes">♡</span><b>便签</b><small>留一句给彼此</small><i>→</i></button>' +
+        '<button type="button" data-bubu-panel="timer"><span class="hub-icon hub-icon-timer">◷</span><b>番茄钟</b><small>一起专注一会儿</small><i>→</i></button>' +
+        '<button type="button" data-bubu-panel="reminders"><span class="hub-icon hub-icon-reminders">♧</span><b>提醒</b><small>记住重要的小事</small><i>→</i></button>' +
+        '<button type="button" data-bubu-panel="settings"><span class="hub-icon hub-icon-settings">⚙</span><b>设置</b><small>调整布布偏好</small><i>→</i></button>' +
+        '</div>';
+    } else if (panel === 'actions') {
       bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>全部动作</span><small>点选后布布会立刻换装</small></div><div class="bubu-action-grid">' +
         BUBU_ACTIONS.map(function (action, index) {
           return '<button class="bubu-action-item" type="button" data-bubu-action="' + index + '"><img loading="lazy" decoding="async" src="' + bubuAsset(action.file) + '" alt="' + escapeBubuHtml(action.file) + '"><span>' + escapeBubuHtml(action.display || action.file) + '</span></button>';
@@ -405,6 +486,9 @@
       bubuData.reminders.push({ text: textInput.value.trim(), at: new Date(timeInput.value).getTime(), done: false });
       saveBubuData(); renderBubuPanel('reminders'); showSpaceToast('提醒收好啦'); return;
     }
+    if (e.target.closest && e.target.closest('[data-memory-coming]')) {
+      showSpaceToast('回忆簿准备好啦，之后可以放进照片和故事'); return;
+    }
     var removeReminder = e.target.closest ? e.target.closest('[data-bubu-reminder-remove]') : null;
     if (removeReminder) { bubuData.reminders.splice(Number(removeReminder.getAttribute('data-bubu-reminder-remove')), 1); saveBubuData(); renderBubuPanel('reminders'); return; }
     var shortcut = e.target.closest ? e.target.closest('[data-bubu-shortcut]') : null;
@@ -421,6 +505,7 @@
     if (!input) return;
     var key = input.getAttribute('data-bubu-setting');
     bubuData.settings[key] = !!input.checked;
+    if (key === 'auto') bubuData.settings.autoExplicit = true;
     saveBubuData();
     if (key === 'quiet') bubuActionChip.textContent = input.checked ? '安静模式' : '安静待机';
     if (key === 'sound' && typeof sound !== 'undefined') { if (input.checked) sound.enable(); else sound.disable(); syncSoundButton(); }
@@ -449,7 +534,7 @@
   for (var spaceIndex = 0; spaceIndex < spaceTools.length; spaceIndex++) (function (button) {
     button.addEventListener('click', function () {
       var label = button.getAttribute('data-space-tool');
-      var target = { memories: 'notes', calendar: 'reminders', wishes: 'shortcuts', settings: 'settings' }[label];
+      var target = { memories: 'memories', utilities: 'hub', calendar: 'reminders', wishes: 'shortcuts', settings: 'settings' }[label];
       if (target) openBubuPanel(target); else showSpaceToast('这个空间会慢慢长出更多故事');
     });
   })(spaceTools[spaceIndex]);
