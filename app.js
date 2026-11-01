@@ -71,6 +71,9 @@
   var spaceMenu = $('spaceMenu');
   var bubuPet = $('bubuPet');
 
+  /* 云端数据层先跑起来：首页天数、便签、同步状态都靠它 */
+  if (typeof SpaceApp !== 'undefined') SpaceApp.init();
+
   /* ---------------- 空间密码门 ----------------
      GitHub Pages 是静态站点，这里做的是前端访问控制，不是后端鉴权。 */
   var accessGate = $('accessGate');
@@ -79,22 +82,9 @@
   var accessError = $('accessError');
   var accessToggle = $('accessToggle');
   var accessConfig = CFG.access || {};
-  var accessRemember = accessConfig.remember === 'local' ? 'local' : (accessConfig.remember === 'none' ? 'none' : 'session');
-  var ACCESS_STORAGE_KEY = 'catfish-space-unlocked-v1';
-
-  function accessStorage(kind) {
-    try { return window[kind + 'Storage']; } catch (e) { return null; }
-  }
-  function hasAccessTicket() {
-    if (accessRemember === 'none') return false;
-    var store = accessStorage(accessRemember);
-    try { return !!(store && store.getItem(ACCESS_STORAGE_KEY) === 'yes'); } catch (e) { return false; }
-  }
-  function saveAccessTicket() {
-    if (accessRemember === 'none') return;
-    var store = accessStorage(accessRemember);
-    try { if (store) store.setItem(ACCESS_STORAGE_KEY, 'yes'); } catch (e) { /* 隐私模式可能禁用存储 */ }
-  }
+  /* 密码现在存在云端（只存加盐哈希），改密码不用重新部署；
+     断网或云端还没建好时，退回 config.js 里那一份，保证自己进得去。 */
+  function accessEnabled() { return accessConfig.enabled !== false; }
   function unlockSpace() {
     document.body.classList.add('access-unlocked');
     if (accessGate) {
@@ -114,19 +104,68 @@
       accessPassword.select();
     }
   }
-  if (!accessConfig.enabled || !String(accessConfig.password || '')) unlockSpace();
-  else if (hasAccessTicket()) unlockSpace();
-  else if (accessPassword) accessPassword.focus();
+  /* 票据里记的是密码哈希的前 12 位：改了密码，旧票据自动失效 */
+  function autoUnlock() {
+    if (!accessEnabled()) { unlockSpace(); return true; }
+    if (typeof SpaceApp !== 'undefined' && SpaceApp.ticketMatches()) { unlockSpace(); return true; }
+    if (accessPassword) { try { accessPassword.focus(); } catch (e) { /* 忽略 */ } }
+    return false;
+  }
+  autoUnlock();
+  if (typeof Space !== 'undefined' && Space.ready) {
+    Space.ready.then(function () {
+      /* 云端数据到手后再确认一次：可能密码已经被另一边改过了 */
+      if (!document.body.classList.contains('access-unlocked')) autoUnlock();
+      else checkTicketStillValid();
+    });
+  }
   if (accessForm) accessForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    var expected = String(accessConfig.password == null ? '' : accessConfig.password);
-    var actual = accessPassword ? accessPassword.value : '';
-    if (actual === expected) {
-      saveAccessTicket();
+    if (!accessPassword) return;
+    var actual = accessPassword.value;
+    var submitBtn = accessForm.querySelector('.access-submit');
+    if (submitBtn) submitBtn.disabled = true;
+    if (accessError) accessError.textContent = '';
+    var check = (typeof SpaceApp !== 'undefined')
+      ? SpaceApp.verifyPassword(actual)
+      : Promise.resolve(false);
+    check.then(function (ok) {
+      if (submitBtn) submitBtn.disabled = false;
+      if (!ok) { rejectAccess(); return; }
+      var doc = (typeof SpaceApp !== 'undefined') ? SpaceApp.state.access : null;
+      if (typeof Space !== 'undefined' && doc && doc.hash) Space.writeTicket(doc.hash.slice(0, 12));
       if (accessError) accessError.textContent = '';
       unlockSpace();
-    } else rejectAccess();
+    }).catch(function () {
+      if (submitBtn) submitBtn.disabled = false;
+      rejectAccess();
+    });
   });
+  /* 密码被另一边改过：本机那张旧票据作废，退回密码门 */
+  function lockSpace() {
+    if (typeof Space !== 'undefined') Space.writeTicket('');
+    document.body.classList.remove('access-unlocked');
+    if (accessGate) { accessGate.classList.remove('is-unlocked'); accessGate.removeAttribute('aria-hidden'); }
+    if (app) app.setAttribute('aria-hidden', 'true');
+    if (accessError) accessError.textContent = '密码已经改过了，请输入新密码。';
+    if (accessPassword) {
+      accessPassword.value = '';
+      try { accessPassword.focus(); } catch (e) { /* 忽略 */ }
+    }
+  }
+  function checkTicketStillValid() {
+    if (!document.body.classList.contains('access-unlocked')) return;
+    if (!accessEnabled() || typeof Space === 'undefined' || typeof SpaceApp === 'undefined') return;
+    if (!Space.readTicket()) return;          /* 还没发过票据：交给登录流程自己判断 */
+    if (SpaceApp.ticketMatches()) return;
+    lockSpace();
+  }
+  if (typeof Space !== 'undefined' && Space.on) {
+    Space.on('change', function (detail) {
+      if (!detail || detail.key === 'access' || detail.key === null) checkTicketStillValid();
+    });
+  }
+
   if (accessToggle && accessPassword) accessToggle.addEventListener('click', function () {
     var visible = accessPassword.type === 'text';
     accessPassword.type = visible ? 'password' : 'text';
@@ -170,7 +209,10 @@
   if (openLetter) openLetter.addEventListener('click', enterLetter);
   if (spaceBack) spaceBack.addEventListener('click', returnToSpace);
   /* ---------------- 布布网页端控制台 ----------------
-     参考桌宠的窗口能力在网页里落成可触摸的动作库和工具面板。 */
+     数据分两层：
+       · 云端共享（便签 / 回忆 / 愿望 / 提醒 / 番茄钟 / 空间密码）→ space-app.js
+       · 这台设备自己的偏好（声音 / 安静模式 / 自动轮换）→ 本地 localStorage
+     所以「别把对方的手机静音」这种事不会发生，而写下的内容两边都看得见。 */
   var bubuImage = $('bubuImage');
   var bubuActionChip = $('bubuActionChip');
   var bubuCountdown = $('bubuCountdown');
@@ -181,10 +223,7 @@
   var bubuPanelBody = $('bubuPanelBody');
   var bubuPanelClose = $('bubuPanelClose');
   var bubuContext = $('bubuContext');
-  var bubuNoteWidget = $('bubuNoteWidget');
-  var bubuNoteText = $('bubuNoteText');
-  var bubuNoteClose = $('bubuNoteClose');
-  var BUBU_STORE = 'catfish-bubu-room-v1';
+  var BUBU_STORE = 'catfish-bubu-room-v2';
   var BUBU_FALLBACK = 'assets/bubu/安静一二（待机）.gif';
   var BUBU_ACTIONS = [
     ['assets/bubu/一二咬布布.gif', '咬一口布布，今天也要黏在一起。', '咬布布'],
@@ -229,27 +268,26 @@
     return (a && a.file) ? a : BUBU_ACTIONS[13];
   }
 
+  /* 只存本机偏好：换设备不该被对方的静音设置影响 */
   var bubuData = {
-    note: '', notePinned: false, reminders: [],
-    timer: { running: false, mode: 'focus', duration: 1500, remaining: 1500, endsAt: 0 },
     settings: { quiet: false, auto: false, bubbles: true, sound: true }
   };
   try {
     var storedBubu = JSON.parse(localStorage.getItem(BUBU_STORE) || 'null');
-    if (storedBubu && typeof storedBubu === 'object') {
-      bubuData.note = typeof storedBubu.note === 'string' ? storedBubu.note : '';
-      bubuData.notePinned = !!storedBubu.notePinned;
-      bubuData.reminders = Array.isArray(storedBubu.reminders) ? storedBubu.reminders : [];
-      bubuData.timer = Object.assign(bubuData.timer, storedBubu.timer || {});
-      bubuData.settings = Object.assign(bubuData.settings, storedBubu.settings || {});
+    /* 从旧版本升上来的：沿用之前的音效/安静模式偏好，别让设置白丢 */
+    if (!storedBubu) {
+      try { storedBubu = JSON.parse(localStorage.getItem('catfish-bubu-room-v1') || 'null'); } catch (e0) { storedBubu = null; }
+    }
+    if (storedBubu && storedBubu.settings) {
+      bubuData.settings = Object.assign(bubuData.settings, storedBubu.settings);
       /* 旧版本默认会自动轮换，升级时只迁移一次，避免打扰正在使用的布布。 */
-      if (!storedBubu.settings || !Object.prototype.hasOwnProperty.call(storedBubu.settings, 'autoExplicit')) {
+      if (!Object.prototype.hasOwnProperty.call(storedBubu.settings, 'autoExplicit')) {
         bubuData.settings.auto = false;
         bubuData.settings.autoExplicit = true;
         saveBubuData();
       }
     }
-  } catch (e) { /* 本地存储不可用时继续使用内存数据 */ }
+  } catch (e) { /* 本地存储不可用时继续使用默认值 */ }
 
   function saveBubuData() {
     try { localStorage.setItem(BUBU_STORE, JSON.stringify(bubuData)); } catch (e) { /* 忽略 */ }
@@ -263,21 +301,21 @@
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
     });
   }
-  function formatBubuSeconds(value) {
-    var seconds = Math.max(0, Math.floor(Number(value) || 0));
-    return String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
-  }
-  function bubuTimerRemaining() {
-    if (!bubuData.timer.running) return bubuData.timer.remaining;
-    return Math.max(0, Math.ceil((bubuData.timer.endsAt - Date.now()) / 1000));
-  }
+
+  /* 首页那个小倒计时：状态在云端（space-app.js），这里只负责显示 */
   function updateBubuCountdown() {
-    var runningTimer = !!bubuData.timer.running;
+    var t = (typeof SpaceApp !== 'undefined' && SpaceApp.state && SpaceApp.state.timer) || null;
+    var runningTimer = !!(t && t.running);
     if (bubuCountdown) bubuCountdown.hidden = !runningTimer;
     if (!runningTimer) return;
-    if (bubuCountdownMode) bubuCountdownMode.textContent = bubuData.timer.mode === 'break' ? '休息' : '专注';
-    if (bubuCountdownClock) bubuCountdownClock.textContent = formatBubuSeconds(bubuTimerRemaining());
+    if (bubuCountdownMode) bubuCountdownMode.textContent = t.mode === 'break' ? '休息' : '专注';
+    if (bubuCountdownClock) {
+      var left = Math.max(0, Math.ceil((t.endsAt - Date.now()) / 1000));
+      var mm = Math.floor(left / 60), ss = left % 60;
+      bubuCountdownClock.textContent = (mm < 10 ? '0' + mm : mm) + ':' + (ss < 10 ? '0' + ss : ss);
+    }
   }
+
   var bubuActionSeq = 0;
   var bubuLastActionAt = 0;
   var bubuAutoNextAt = Date.now() + 45000;
@@ -331,27 +369,32 @@
     var note = bubuPet ? bubuPet.querySelector('.bubu-pet-note') : null;
     if (note) note.textContent = '';
   }
-  function renderBubuNoteWidget() {
-    if (!bubuNoteWidget) return;
-    if (bubuData.notePinned && bubuData.note.trim()) {
-      bubuNoteWidget.hidden = false;
-      if (bubuNoteText) bubuNoteText.textContent = bubuData.note;
-    } else bubuNoteWidget.hidden = true;
-  }
+
+  var PANEL_TITLES = {
+    hub: '小工具', memories: '我们的回忆', actions: '布布动作库',
+    notes: '便签', timer: '番茄钟', reminders: '提醒', settings: '设置'
+  };
+
   function bubuCurrentPanel() {
     return bubuFeaturePanel && bubuFeaturePanel.getAttribute('data-panel') || 'actions';
   }
+
+  /* 「总览」和「动作库」是纯本地面板；其余六个由 space-app.js 渲染 */
   function renderBubuPanel(panel) {
     if (!bubuPanelBody || !bubuPanelTitle) return;
     panel = panel || bubuCurrentPanel();
-    var titles = { hub: '小工具', memories: '我们的回忆', actions: '布布动作库', notes: '便签', timer: '番茄钟', reminders: '提醒', shortcuts: '快捷启动', settings: '设置' };
-    bubuPanelTitle.textContent = titles[panel] || titles.actions;
     if (bubuFeaturePanel) bubuFeaturePanel.setAttribute('data-panel', panel);
     var tabs = document.querySelectorAll('[data-bubu-panel]');
     for (var t = 0; t < tabs.length; t++) tabs[t].classList.toggle('is-active', tabs[t].getAttribute('data-bubu-panel') === panel);
-    if (panel === 'memories') {
-      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>把日子收好</span><small>属于你们的回忆簿</small></div><div class="memory-empty"><span class="memory-empty-icon">♡</span><b>这里会装下你们的故事</b><p>照片、日期和想起来会微笑的瞬间，都可以慢慢放进来。</p><button type="button" class="bubu-primary" data-memory-coming>开始收集回忆</button></div>';
-    } else if (panel === 'hub') {
+
+    if (typeof SpaceApp !== 'undefined' && SpaceApp.renderPanel(panel, bubuPanelBody)) {
+      bubuPanelTitle.textContent = PANEL_TITLES[panel] || '小工具';
+      updateBubuCountdown();
+      return;
+    }
+
+    bubuPanelTitle.textContent = PANEL_TITLES[panel] || PANEL_TITLES.actions;
+    if (panel === 'hub') {
       bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>日常小工具</span><small>选择一个功能开始使用</small></div><div class="bubu-tool-hub">' +
         '<button type="button" data-bubu-panel="actions"><span class="hub-icon hub-icon-actions">✦</span><b>动作</b><small>和布布互动一下</small><i>→</i></button>' +
         '<button type="button" data-bubu-panel="notes"><span class="hub-icon hub-icon-notes">♡</span><b>便签</b><small>留一句给彼此</small><i>→</i></button>' +
@@ -359,22 +402,11 @@
         '<button type="button" data-bubu-panel="reminders"><span class="hub-icon hub-icon-reminders">♧</span><b>提醒</b><small>记住重要的小事</small><i>→</i></button>' +
         '<button type="button" data-bubu-panel="settings"><span class="hub-icon hub-icon-settings">⚙</span><b>设置</b><small>调整布布偏好</small><i>→</i></button>' +
         '</div>';
-    } else if (panel === 'actions') {
+    } else {
       bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>全部动作</span><small>点选后布布会立刻换装</small></div><div class="bubu-action-grid">' +
         BUBU_ACTIONS.map(function (action, index) {
           return '<button class="bubu-action-item" type="button" data-bubu-action="' + index + '"><img loading="lazy" decoding="async" src="' + bubuAsset(action.file) + '" alt="' + escapeBubuHtml(action.file) + '"><span>' + escapeBubuHtml(action.display || action.file) + '</span></button>';
         }).join('') + '</div>';
-    } else if (panel === 'notes') {
-      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>留一句给彼此</span><small>内容保存在这台设备的浏览器里</small></div><textarea class="bubu-field bubu-note-field" id="bubuNoteInput" rows="5" placeholder="写下今天想说的话……">' + escapeBubuHtml(bubuData.note) + '</textarea><div class="bubu-form-actions"><button class="bubu-primary" type="button" data-bubu-note-save>保存便签</button><button type="button" data-bubu-note-pin>' + (bubuData.notePinned ? '取消贴在首页' : '贴在首页') + '</button></div>';
-    } else if (panel === 'timer') {
-      var timerRemaining = bubuTimerRemaining();
-      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>一起专注一会儿</span><small>完成后布布会送你一段庆祝动作</small></div><div class="bubu-timer-card"><span class="bubu-timer-mode">' + (bubuData.timer.mode === 'break' ? '休息中' : '专注中') + '</span><strong id="bubuTimerClock">' + formatBubuSeconds(timerRemaining) + '</strong><label>分钟 <input class="bubu-number" id="bubuTimerMinutes" type="number" min="1" max="120" value="' + Math.max(1, Math.round((bubuData.timer.duration || 1500) / 60)) + '"></label></div><div class="bubu-form-actions"><button class="bubu-primary" type="button" data-bubu-timer-toggle>' + (bubuData.timer.running ? '暂停' : '开始') + '</button><button type="button" data-bubu-timer-reset>重置</button></div>';
-    } else if (panel === 'reminders') {
-      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>温柔提醒</span><small>打开页面时会检查到期提醒</small></div><div class="bubu-reminder-form"><input class="bubu-field" id="bubuReminderText" type="text" placeholder="提醒内容"><input class="bubu-field" id="bubuReminderTime" type="datetime-local"><button class="bubu-primary" type="button" data-bubu-reminder-add>添加提醒</button></div><div class="bubu-reminder-list">' + (bubuData.reminders.length ? bubuData.reminders.map(function (item, index) { return '<div class="bubu-reminder-row"><span>' + escapeBubuHtml(item.text) + '<small>' + escapeBubuHtml(new Date(item.at).toLocaleString()) + '</small></span><button type="button" data-bubu-reminder-remove="' + index + '" aria-label="删除提醒">×</button></div>'; }).join('') : '<p class="bubu-empty">还没有提醒，给未来的你留一句话吧。</p>') + '</div>';
-    } else if (panel === 'shortcuts') {
-      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>常用入口</span><small>把情侣空间里常用的事放在一起</small></div><div class="bubu-shortcut-list"><button type="button" data-bubu-shortcut="letter"><span>✉</span><b>写给你的信</b><small>打开分页信件</small></button><button type="button" data-bubu-shortcut="notes"><span>♡</span><b>留一句便签</b><small>记下今天的心情</small></button><button type="button" data-bubu-shortcut="random"><span>✦</span><b>随机动作</b><small>让布布自己选一个</small></button><button type="button" data-bubu-shortcut="wishes"><span>＋</span><b>愿望清单</b><small>把想一起做的事写下来</small></button></div>';
-    } else {
-      bubuPanelBody.innerHTML = '<div class="bubu-panel-intro"><span>布布偏好</span><small>调整后会自动保存在浏览器里</small></div><label class="bubu-setting"><span><b>安静模式</b><small>暂停自动动作和背景提示</small></span><input type="checkbox" data-bubu-setting="quiet" ' + (bubuData.settings.quiet ? 'checked' : '') + '></label><label class="bubu-setting"><span><b>自动待机轮换</b><small>让布布偶尔走路、跳舞和休息</small></span><input type="checkbox" data-bubu-setting="auto" ' + (bubuData.settings.auto ? 'checked' : '') + '></label><label class="bubu-setting"><span><b>爱心粒子</b><small>互动时撒出小爱心</small></span><input type="checkbox" data-bubu-setting="bubbles" ' + (bubuData.settings.bubbles ? 'checked' : '') + '></label><label class="bubu-setting"><span><b>轻音效</b><small>互动时播放轻轻的提示音</small></span><input type="checkbox" data-bubu-setting="sound" ' + (bubuData.settings.sound ? 'checked' : '') + '></label>';
     }
     updateBubuCountdown();
   }
@@ -397,66 +429,10 @@
     if (!pool.length) pool = BUBU_ACTIONS;
     return pool[Math.floor(Math.random() * pool.length)];
   }
-  function triggerBubuReminder(item) {
-    showBubuAction(BUBU_ACTIONS[7], item.text, 5200);
-    showSpaceToast('布布提醒你：' + item.text);
-  }
-  function checkBubuReminders() {
-    var now = Date.now(), changed = false;
-    for (var r = 0; r < bubuData.reminders.length; r++) {
-      var reminder = bubuData.reminders[r];
-      if (!reminder.done && Number(reminder.at) <= now) {
-        reminder.done = true;
-        changed = true;
-        triggerBubuReminder(reminder);
-      }
-    }
-    if (changed) { saveBubuData(); if (!bubuFeaturePanel || bubuCurrentPanel() !== 'reminders') return; renderBubuPanel('reminders'); }
-  }
-  function bubuTimerTick() {
-    if (bubuData.timer.running) {
-      var remain = bubuTimerRemaining();
-      bubuData.timer.remaining = remain;
-      if (remain <= 0) {
-        bubuData.timer.running = false;
-        bubuData.timer.remaining = 0;
-        saveBubuData();
-        showBubuAction(BUBU_ACTIONS[14], '', 4200);
-        showSpaceToast('番茄钟完成，休息一下吧');
-        if (!bubuFeaturePanel || bubuCurrentPanel() === 'timer') renderBubuPanel('timer');
-      }
-    }
-    updateBubuCountdown();
-    var timerClock = $('bubuTimerClock');
-    if (timerClock) timerClock.textContent = formatBubuSeconds(bubuTimerRemaining());
-  }
-  function bubuStartTimer() {
-    var minutesInput = $('bubuTimerMinutes');
-    if (minutesInput && !bubuData.timer.running) bubuData.timer.duration = clamp(Number(minutesInput.value) * 60 || 1500, 60, 7200);
-    if (bubuData.timer.remaining <= 0 || bubuData.timer.remaining > bubuData.timer.duration) bubuData.timer.remaining = bubuData.timer.duration;
-    bubuData.timer.endsAt = Date.now() + bubuData.timer.remaining * 1000;
-    bubuData.timer.running = true;
-    saveBubuData();
-    showBubuAction(BUBU_ACTIONS[28], '', 5000);
-    renderBubuPanel('timer');
-  }
-  function bubuPauseTimer() {
-    bubuData.timer.remaining = bubuTimerRemaining();
-    bubuData.timer.running = false;
-    saveBubuData();
-    renderBubuPanel('timer');
-  }
-  function bubuResetTimer() {
-    var minutesInput = $('bubuTimerMinutes');
-    var duration = minutesInput ? clamp(Number(minutesInput.value) * 60 || bubuData.timer.duration, 60, 7200) : bubuData.timer.duration;
-    bubuData.timer.duration = duration;
-    bubuData.timer.remaining = duration;
-    bubuData.timer.running = false;
-    saveBubuData();
-    renderBubuPanel('timer');
-  }
 
+  /* 面板里的点击：云端的那些交给 space-app.js，本地的（动作库）留在这里 */
   if (bubuFeaturePanel) bubuFeaturePanel.addEventListener('click', function (e) {
+    if (typeof SpaceApp !== 'undefined' && SpaceApp.handleClick(e, bubuFeaturePanel)) return;
     var actionButton = e.target.closest ? e.target.closest('[data-bubu-action]') : null;
     if (actionButton) {
       var action = BUBU_ACTIONS[Number(actionButton.getAttribute('data-bubu-action'))] || BUBU_ACTIONS[13];
@@ -464,43 +440,9 @@
       closeBubuPanel();
       return;
     }
-    if (e.target.closest && e.target.closest('[data-bubu-note-save]')) {
-      var noteInput = $('bubuNoteInput');
-      bubuData.note = noteInput ? noteInput.value.trim() : bubuData.note;
-      bubuData.notePinned = true;
-      saveBubuData(); renderBubuNoteWidget(); showSpaceToast('便签已经贴在首页啦'); return;
-    }
-    if (e.target.closest && e.target.closest('[data-bubu-note-pin]')) {
-      var input = $('bubuNoteInput');
-      if (input) bubuData.note = input.value.trim();
-      bubuData.notePinned = !bubuData.notePinned;
-      saveBubuData(); renderBubuNoteWidget(); renderBubuPanel('notes'); return;
-    }
-    if (e.target.closest && e.target.closest('[data-bubu-timer-toggle]')) {
-      if (bubuData.timer.running) bubuPauseTimer(); else bubuStartTimer(); return;
-    }
-    if (e.target.closest && e.target.closest('[data-bubu-timer-reset]')) { bubuResetTimer(); return; }
-    if (e.target.closest && e.target.closest('[data-bubu-reminder-add]')) {
-      var textInput = $('bubuReminderText'), timeInput = $('bubuReminderTime');
-      if (!textInput || !textInput.value.trim() || !timeInput || !timeInput.value) { showSpaceToast('把提醒内容和时间都填好哦'); return; }
-      bubuData.reminders.push({ text: textInput.value.trim(), at: new Date(timeInput.value).getTime(), done: false });
-      saveBubuData(); renderBubuPanel('reminders'); showSpaceToast('提醒收好啦'); return;
-    }
-    if (e.target.closest && e.target.closest('[data-memory-coming]')) {
-      showSpaceToast('回忆簿准备好啦，之后可以放进照片和故事'); return;
-    }
-    var removeReminder = e.target.closest ? e.target.closest('[data-bubu-reminder-remove]') : null;
-    if (removeReminder) { bubuData.reminders.splice(Number(removeReminder.getAttribute('data-bubu-reminder-remove')), 1); saveBubuData(); renderBubuPanel('reminders'); return; }
-    var shortcut = e.target.closest ? e.target.closest('[data-bubu-shortcut]') : null;
-    if (shortcut) {
-      var shortcutName = shortcut.getAttribute('data-bubu-shortcut');
-      if (shortcutName === 'letter') { closeBubuPanel(); enterLetter(); }
-      else if (shortcutName === 'notes') renderBubuPanel('notes');
-      else if (shortcutName === 'random') { showBubuAction(randomBubuAction()); closeBubuPanel(); }
-      else { closeBubuPanel(); showSpaceToast('愿望清单会和你们的故事一起长大'); }
-    }
   });
   if (bubuFeaturePanel) bubuFeaturePanel.addEventListener('change', function (e) {
+    if (typeof SpaceApp !== 'undefined' && SpaceApp.handleChange(e, bubuFeaturePanel)) return;
     var input = e.target.closest ? e.target.closest('[data-bubu-setting]') : null;
     if (!input) return;
     var key = input.getAttribute('data-bubu-setting');
@@ -508,7 +450,7 @@
     if (key === 'auto') bubuData.settings.autoExplicit = true;
     saveBubuData();
     if (key === 'quiet') bubuActionChip.textContent = input.checked ? '安静模式' : '安静待机';
-    if (key === 'sound' && typeof sound !== 'undefined') { if (input.checked) sound.enable(); else sound.disable(); syncSoundButton(); }
+    if (key === 'sound') { if (input.checked) sound.enable(); else sound.disable(); syncSoundButton(); }
     showSpaceToast(input.checked ? '已打开' : '已关闭');
   });
   var bubuTabButtons = document.querySelectorAll('[data-bubu-panel]');
@@ -523,7 +465,6 @@
     openBubuPanel(panelButton.getAttribute('data-bubu-panel'));
   }, true);
   if (bubuPanelClose) bubuPanelClose.addEventListener('click', closeBubuPanel);
-  if (bubuNoteClose) bubuNoteClose.addEventListener('click', function () { bubuData.notePinned = false; saveBubuData(); renderBubuNoteWidget(); });
   if (spaceMenu) spaceMenu.addEventListener('click', function () { openBubuPanel('settings'); });
   if (bubuContext) bubuContext.addEventListener('click', function (e) { var button = e.target.closest ? e.target.closest('[data-bubu-panel]') : null; if (button) openBubuPanel(button.getAttribute('data-bubu-panel')); });
   document.addEventListener('click', function (e) {
@@ -534,7 +475,7 @@
   for (var spaceIndex = 0; spaceIndex < spaceTools.length; spaceIndex++) (function (button) {
     button.addEventListener('click', function () {
       var label = button.getAttribute('data-space-tool');
-      var target = { memories: 'memories', utilities: 'hub', calendar: 'reminders', wishes: 'shortcuts', settings: 'settings' }[label];
+      var target = { memories: 'memories', utilities: 'hub', calendar: 'reminders', wishes: 'wishes', settings: 'settings' }[label];
       if (target) openBubuPanel(target); else showSpaceToast('这个空间会慢慢长出更多故事');
     });
   })(spaceTools[spaceIndex]);
@@ -568,7 +509,6 @@
   }
   if (bubuPet) {
     setBubuImage(BUBU_ACTIONS[13]);
-    renderBubuNoteWidget();
     bubuPet.addEventListener('dragstart', function (e) { e.preventDefault(); });
     bubuPet.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
@@ -594,7 +534,7 @@
       else if (bubuLongTriggered) setTimeout(function () { bubuLongTriggered = false; }, 0);
     });
     bubuPet.addEventListener('pointercancel', function () { bubuDrag = null; clearBubuLongTimer(); bubuSuppressClick = false; });
-    bubuPet.addEventListener('dblclick', function (e) { e.preventDefault(); e.stopPropagation(); clearBubuLongTimer(); if (bubuClickTimer) { clearTimeout(bubuClickTimer); bubuClickTimer = 0; } openBubuPanel(bubuFeaturePanel && !bubuFeaturePanel.hidden ? 'actions' : 'actions'); });
+    bubuPet.addEventListener('dblclick', function (e) { e.preventDefault(); e.stopPropagation(); clearBubuLongTimer(); if (bubuClickTimer) { clearTimeout(bubuClickTimer); bubuClickTimer = 0; } openBubuPanel('actions'); });
     bubuPet.addEventListener('click', function (e) {
       e.stopPropagation(); clearBubuLongTimer();
       if (bubuSuppressClick || bubuLongTriggered) { bubuSuppressClick = false; return; }
@@ -605,13 +545,15 @@
     bubuPet.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); clearBubuLongTimer(); openBubuContext(e); });
   }
   setInterval(function () {
-    bubuTimerTick(); checkBubuReminders();
+    updateBubuCountdown();
     var now = Date.now();
     if (now >= bubuAutoNextAt && !document.hidden && !bubuData.settings.quiet && bubuData.settings.auto && (!bubuFeaturePanel || bubuFeaturePanel.hidden) && (!app || app.dataset.phase === 'space') && !bubuDrag && now - bubuLastActionAt >= 30000) {
       showBubuAction(randomBubuAction(), null, 2200);
       bubuAutoNextAt = Date.now() + 45000 + Math.floor(Math.random() * 20000);
     }
   }, 1000);
+
+  /* 云端数据就绪后，把首页的天数 / 便签 / 同步状态刷新一遍 */
   updateBubuCountdown();
 
   /* 延时：token 变了就自动作废 */
@@ -1330,6 +1272,12 @@
 
     if (!units.length) return { done: Promise.resolve(), finish: function () {} };
 
+    /* 关掉信纸或换幕时会把内容清空，光标就脱离文档了：
+       这时候再往里插字会抛 NoModificationAllowedError，所以每帧都先确认它还活着。 */
+    function alive() {
+      return !!(caret && caret.parentNode && caret.parentNode === el && el.parentNode);
+    }
+
     var state = { finish: null };
     var done = new Promise(function (resolve) {
       var i = 0, last = 0, acc = 0, finished = false;
@@ -1337,15 +1285,18 @@
       function finish() {
         if (finished) return;
         finished = true;
-        acc_html = base + units.join('');        /* 只保留底稿 + 本次内容，不会跨轮次堆积 */
-        el._typed = acc_html;
-        el.innerHTML = acc_html;
+        if (alive()) {
+          acc_html = base + units.join('');        /* 只保留底稿 + 本次内容，不会跨轮次堆积 */
+          el._typed = acc_html;
+          el.innerHTML = acc_html;
+        }
         resolve();
       }
       state.finish = finish;
 
       function frame(t) {
         if (finished) return;
+        if (!alive()) { finished = true; resolve(); return; }   /* 内容已经被清掉了，悄悄收工 */
         if (!last) last = t;
         var dt = (t - last) / 1000;
         last = t;
@@ -1828,6 +1779,7 @@
       envHint.style.animation = 'none';
       void envHint.offsetWidth;   /* 强制回流，重播呼吸动画 */
       envHint.style.animation = '';
+      if (typeof SpaceApp !== 'undefined') SpaceApp.refreshUI();
       fx.start();
     });
   }

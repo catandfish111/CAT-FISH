@@ -13,13 +13,35 @@ window.LOVE_CONFIG = {
     miniNote: '只给你看'          // 信封里露出的那张小纸条
   },
 
+  /* ---------- 云端存储（LeanCloud 国际版）----------
+     填上这三个，便签 / 回忆 / 愿望 / 提醒 / 番茄钟 / 密码 就都存在线上，
+     两个人打开同一个网址看到的是同一份内容。
+     不填也能用，但只会存在当前这台设备的浏览器里（对方看不到）。
+     怎么拿到这三个值：README 的「把数据放到线上」一节。 */
+  cloud: {
+    appId: '',
+    appKey: '',
+    /* 控制台 → 设置 → 域名绑定 里的 API 域名，要带 https:// */
+    serverURL: '',
+    /* 数据表名，控制台里建的那个 Class；不改就保持 SpaceDoc */
+    className: 'SpaceDoc'
+  },
+
   /* ---------- 情侣空间访问密码 ----------
      这是前端密码门，只能阻止普通访问，不能保护 GitHub Pages 源码和资源。
-     修改 password 后刷新页面即可生效；remember 可选 session / local / none。 */
+     password 只在「云端还没有存过密码」时用一次：第一次解锁后，
+     密码会以加盐哈希存进云端，以后在网站「设置 → 空间密码」里改。
+     remember 可选 session / local / none。 */
   access: {
     enabled: true,
-    password: 'catfish',          // 请改成你们自己的密码
+    password: 'catfish',          // 首次进入用的密码，之后以云端为准
     remember: 'session'
+  },
+
+  /* ---------- 两个人一起的第几天 ---------- */
+  couple: {
+    /* 第一次打开时会拿它初始化云端记录，之后在网站「设置」里改 */
+    startDate: ''                 // 例：'2024-05-20'
   },
 
   /* ---------- 卡通形象 ----------

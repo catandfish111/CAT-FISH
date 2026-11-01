@@ -821,3 +821,99 @@ textarea.bubu-field{min-height:110px;padding:10px 11px;resize:vertical;line-heig
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.15s !important;}
 }
+
+/* ============================================================
+   云端同步：状态标签、便签 / 回忆 / 愿望 / 设置面板
+   ============================================================ */
+/* 顶栏那个「云端已连接」 */
+.sync-chip{
+  margin-left:auto;margin-right:10px;padding:4px 9px;border-radius:999px;
+  font-size:9.5px;letter-spacing:.04em;color:#2f6d80;white-space:nowrap;
+  background:rgba(255,255,255,.66);border:1px solid rgba(255,255,255,.8);
+  box-shadow:0 4px 10px rgba(48,103,124,.08);
+}
+.sync-chip.is-offline{color:#a1616f;background:rgba(255,236,240,.8);border-color:rgba(232,150,168,.45);}
+/* 七个标签在 390px 宽的手机上尽量挤得下（真挤不下就横向滑） */
+.bubu-panel-tabs button{min-width:44px;padding:7px 6px;font-size:10.5px;}
+/* 首页那张便签别挡住下面卡片的点击：只有 × 可点，其余穿透 */
+.bubu-note-widget{pointer-events:none;}
+.bubu-note-widget>button{pointer-events:auto;}
+
+/* 面板里的小工具条 */
+.panel-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 12px;}
+.panel-toolbar .bubu-primary{min-height:34px;padding:7px 13px;border-radius:8px;background:#e9829d;color:#fff;box-shadow:0 6px 12px rgba(226,119,145,.18);font-size:11px;}
+.panel-count{color:#8ba7ae;font-size:10px;letter-spacing:.02em;}
+.panel-count b{color:#e2728f;font-size:12px;font-weight:700;}
+.panel-count-top{margin:0 2px 8px;}
+.panel-note{margin:9px 2px 0;color:#93aab0;font-size:10px;line-height:1.7;}
+.panel-empty{display:flex;flex-direction:column;align-items:center;padding:24px 20px;text-align:center;border:1px dashed rgba(99,160,173,.26);border-radius:12px;background:rgba(255,255,255,.5);}
+.panel-empty-icon{width:46px;height:46px;display:grid;place-items:center;margin-bottom:10px;border-radius:50%;background:#f3c4ce;color:#fff;font-size:24px;line-height:1;}
+.panel-empty b{color:#416d79;font-size:13px;letter-spacing:.04em;}
+.panel-empty p{max-width:250px;margin:8px 0 0;color:#8aa4aa;font-size:11px;line-height:1.75;}
+.panel-del{width:22px;height:22px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;background:rgba(226,114,143,.1);color:#d2738c;font-size:13px;line-height:1;}
+.panel-del:hover{background:rgba(226,114,143,.2);}
+.panel-inline-form{display:flex;gap:8px;align-items:center;}
+.panel-inline-form .bubu-field{flex:1 1 auto;}
+.panel-inline-form .bubu-primary{flex:0 0 auto;min-height:38px;padding:0 14px;border-radius:9px;background:#e9829d;color:#fff;font-size:11px;box-shadow:0 6px 12px rgba(226,119,145,.18);}
+
+/* 回忆 */
+.memory-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:4px;}
+.memory-card{position:relative;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(99,160,173,.14);border-radius:12px;background:rgba(255,255,255,.72);}
+.memory-card .panel-del{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.86);}
+.memory-photo{aspect-ratio:4/3;background:#eef7f9;display:grid;place-items:center;overflow:hidden;}
+.memory-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+.memory-no-photo{color:#d9a2b1;font-size:26px;}
+.memory-info{padding:8px 9px 10px;}
+.memory-info b{display:block;color:#3f6a76;font-size:11.5px;line-height:1.5;}
+.memory-info p{margin:4px 0 0;color:#7f9aa1;font-size:10.5px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.memory-info small{display:block;margin-top:6px;color:#a3b8bd;font-size:9.5px;}
+.memory-editor{margin:0 0 14px;padding:12px;border:1px solid rgba(232,150,168,.3);border-radius:12px;background:rgba(255,246,249,.7);}
+.memory-pick{display:block;margin-bottom:9px;}
+.memory-pick-box{display:block;padding:11px;text-align:center;border:1px dashed rgba(226,114,143,.42);border-radius:10px;color:#d2738c;font-size:11px;cursor:pointer;background:rgba(255,255,255,.6);}
+.memory-preview{margin-bottom:9px;border-radius:10px;overflow:hidden;background:#eef7f9;}
+.memory-preview img{display:block;width:100%;max-height:180px;object-fit:cover;}
+.memory-editor .bubu-field{margin-bottom:8px;}
+.memory-editor .bubu-form-actions{margin-top:2px;}
+
+/* 愿望 */
+.wish-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;}
+.wish-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid rgba(99,160,173,.14);border-radius:10px;background:rgba(255,255,255,.72);}
+.wish-check{flex:0 0 auto;width:20px;height:20px;display:grid;place-items:center;border-radius:50%;border:1.5px solid rgba(226,114,143,.5);background:#fff;color:#fff;font-size:11px;line-height:1;}
+.wish-row.is-done .wish-check{background:#e9829d;border-color:#e9829d;}
+.wish-text{flex:1 1 auto;color:#426d79;font-size:12px;line-height:1.55;word-break:break-word;}
+.wish-row.is-done .wish-text{color:#a7bcc0;text-decoration:line-through;}
+.wish-by{flex:0 0 auto;color:#a8bcc1;font-size:9.5px;}
+
+/* 便签 */
+.note-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+.note-row{display:flex;gap:8px;align-items:flex-start;padding:10px;border:1px solid rgba(99,160,173,.14);border-radius:11px;background:rgba(255,255,255,.72);}
+.note-row.is-pinned{border-color:rgba(232,150,168,.5);background:rgba(255,247,250,.86);}
+.note-body{flex:1 1 auto;min-width:0;}
+.note-body p{margin:0;color:#426d79;font-size:12px;line-height:1.65;word-break:break-word;white-space:pre-wrap;}
+.note-body small{display:block;margin-top:5px;color:#a8bcc1;font-size:9.5px;}
+.note-tools{flex:0 0 auto;display:flex;align-items:center;gap:2px;}
+.note-tools button{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;color:#d9a2b1;font-size:12px;line-height:1;}
+.note-row.is-pinned .note-tools [data-note-pin]{color:#e9829d;}
+
+/* 设置 */
+.setting-block{margin-bottom:14px;padding-bottom:13px;border-bottom:1px solid rgba(99,160,173,.12);}
+.setting-block:last-child{border-bottom:0;padding-bottom:0;margin-bottom:0;}
+.setting-block > b{display:block;margin-bottom:7px;color:#3d6773;font-size:11.5px;letter-spacing:.04em;}
+.setting-block > small{display:block;margin-top:6px;color:#a3b8bd;font-size:9.5px;line-height:1.6;}
+.setting-block .bubu-field{margin-bottom:7px;}
+.identity-row{display:flex;gap:7px;}
+.identity-chip{flex:1 1 0;min-height:32px;border:1px solid rgba(92,151,165,.22);border-radius:9px;background:rgba(255,255,255,.78);color:#5d818c;font-size:11px;}
+.identity-chip.is-active{border-color:#e9829d;background:rgba(255,238,243,.95);color:#d2738c;font-weight:700;}
+.selftest-out{margin-top:9px;padding:9px 10px;border-radius:9px;background:rgba(240,250,252,.9);border:1px solid rgba(99,160,173,.16);}
+.selftest-row{margin:0 0 6px;font-size:10px;line-height:1.6;color:#5d818c;}
+.selftest-row:last-child{margin-bottom:0;}
+.selftest-row b{display:block;font-size:10.5px;}
+.selftest-row span{display:block;color:#8ba7ae;word-break:break-all;}
+.selftest-row.is-ok b{color:#3f8f6b;}
+.selftest-row.is-bad b{color:#c2596f;}
+
+@media (max-width:420px){
+  .memory-grid{grid-template-columns:1fr;}
+  .sync-chip{font-size:9px;padding:3px 7px;margin-right:8px;}
+}
+
