@@ -124,6 +124,12 @@
     try { ls.setItem(QUEUE_KEY, JSON.stringify(queue)); } catch (e) { /* 忽略 */ }
   }
 
+  /* 还没解锁（本机模式）时写的东西：记下来，等云端空间建好后补传 */
+  function markPending(key) {
+    if (!configured || key === 'access') return;
+    if (pendingSeed.indexOf(key) < 0) pendingSeed.push(key);
+  }
+
   /* ---------------- 事件 ---------------- */
   function emit(name, detail) {
     for (var i = 0; i < listeners.length; i += 1) {
@@ -667,7 +673,8 @@
         if (!local) return null;
         return readDoc(key).then(function (row) {
           if (row) return null;    /* 云端已经有了，不覆盖 */
-          return writeDoc(key, { rev: 1, updatedAt: new Date().toISOString(), payload: local.payload }, 'space: 首次上传 ' + key);
+          /* 第三个参数是「文件当前的 sha」：新建的文件没有 sha，必须留空 */
+          return writeDoc(key, { rev: 1, updatedAt: new Date().toISOString(), payload: local.payload }, '');
         }).catch(function () { return null; });
       });
     });
@@ -719,13 +726,14 @@
 
   function set(key, payload) {
     var next = clone(payload);
-    if (!configured) {
+    if (!configured || !DEK) {
       docs[key] = {
         payload: next,
         rev: (docs[key] ? docs[key].rev : 0) + 1,
         updatedAt: new Date().toISOString(),
         sha: ''
       };
+      markPending(key);
       saveCache();
       emit('change', { key: key, payload: clone(next), local: true });
       return Promise.resolve(next);
@@ -744,11 +752,12 @@
   /* 读最新 -> 改 -> 带版本校验写回；冲突就重读重试，两个人同时改不会互相盖掉 */
   function mutate(key, updater, attempts) {
     var left = typeof attempts === 'number' ? attempts : 3;
-    if (!configured) {
+    if (!configured || !DEK) {
       var base = get(key) || {};
       var next = updater(clone(base));
       if (next === undefined || next === null) return Promise.resolve(base);
       docs[key] = { payload: next, rev: (docs[key] ? docs[key].rev : 0) + 1, updatedAt: new Date().toISOString(), sha: '' };
+      markPending(key);
       saveCache();
       emit('change', { key: key, payload: clone(next), local: true });
       return Promise.resolve(next);

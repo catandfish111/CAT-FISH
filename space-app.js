@@ -241,7 +241,7 @@
     var st = S.status();
     if (!st.configured) return '只存在这台设备';
     if (!st.secure) return '这个浏览器不支持加密';
-    if (st.locked) return '等待空间密码';
+    if (st.locked) return st.writable ? '等待空间密码' : '本机模式 · 还没贴写入密钥';
     if (!st.online) return st.pending ? '离线 · ' + st.pending + ' 条待上传' : '离线中';
     if (st.pending) return '待上传 ' + st.pending + ' 条';
     if (!st.lastSync) return '正在连接';
@@ -812,9 +812,14 @@
       if (!photoStore() || !photoStore().enabled) { toast('config.js 里还没配 storage.repo'); return true; }
       photoStore().setToken(value);
       if (tk) tk.value = '';
-      toast('密钥存好了，正在同步…');
       fillPhotoStats();
       renderPanel('settings', currentBody);
+      /* 这台设备还没解锁过云端：贴好密钥后要重新输一次密码，才能建立 / 打开云端空间 */
+      if (S.configured && (!S.hasKey || !S.hasKey())) {
+        relockForPassword('密钥存好了，再输一次空间密码：会把这台设备的内容加密传到云端。');
+        return true;
+      }
+      toast('密钥存好了，正在同步…');
       S.refresh().then(function () { refreshUI(); }, function () { /* 网络不好就算了 */ });
       return true;
     }
@@ -940,8 +945,9 @@
              这样两台设备第一次进来用的密码一定是同一个 */
           if (!fallback || String(input) !== fallback) return false;
           if (!S.hasToken()) {
-            unlockHint = '这台设备还没有写入密钥，没法建立云端空间：先在 config.js 的 storage.token 里填上，或在「设置 → 写入密钥」里贴一次。';
-            return false;
+            /* 还没有写入密钥：先按本机模式用，等贴了密钥、再解锁一次就会建立云端空间 */
+            unlockHint = '';
+            return true;
           }
           return S.createSpace(input).then(function () { return true; }, function (err) {
             unlockHint = '建立云端空间失败：' + ((err && err.message) || '网络不通');
@@ -982,6 +988,25 @@
       return ok;
     });
   }
+  /* 把密码门重新盖上来：贴好写入密钥后需要再解锁一次 */
+  function relockForPassword(hint) {
+    document.body.classList.remove('access-unlocked');
+    var gate = $('accessGate');
+    if (gate) {
+      gate.classList.remove('is-unlocked');
+      gate.removeAttribute('aria-hidden');
+    }
+    var appEl = $('app');
+    if (appEl) appEl.setAttribute('aria-hidden', 'true');
+    var errEl = $('accessError');
+    if (errEl) errEl.textContent = hint || '请输入空间密码。';
+    var pwd = $('accessPassword');
+    if (pwd) {
+      pwd.value = '';
+      try { pwd.focus(); } catch (e) { /* 忽略 */ }
+    }
+  }
+
   function ticketMatches() {
     var ticket = S.readTicket();
     var doc = state.access;
