@@ -358,14 +358,21 @@
   }
 
   function createBranch() {
-    return gh('POST', CFG.apiBase + '/repos/' + CFG.repo + '/git/trees', { tree: [] }).then(function (tree) {
-      return gh('POST', CFG.apiBase + '/repos/' + CFG.repo + '/git/commits', {
+    /* 不能用空 tree（GitHub 会 422 Invalid tree info）：
+       先建一个占位文件，做成没有父提交的孤儿分支，数据分支就干干净净 */
+    var base = CFG.apiBase + '/repos/' + CFG.repo;
+    return gh('POST', base + '/git/blobs', { content: 'catfish-space\n', encoding: 'utf-8' }).then(function (blob) {
+      return gh('POST', base + '/git/trees', {
+        tree: [{ path: '.gitkeep', mode: '100644', type: 'blob', sha: blob && blob.sha }]
+      });
+    }).then(function (tree) {
+      return gh('POST', base + '/git/commits', {
         message: 'space: 初始化数据分支',
         tree: tree && tree.sha,
         parents: []
       });
     }).then(function (commit) {
-      return gh('POST', CFG.apiBase + '/repos/' + CFG.repo + '/git/refs', {
+      return gh('POST', base + '/git/refs', {
         ref: 'refs/heads/' + CFG.branch,
         sha: commit && commit.sha
       });
@@ -373,43 +380,76 @@
       branchState = 1;
       return true;
     }, function (err) {
-      if (err && (err.status === 422 || err.status === 409)) { branchState = 1; return true; }
+      /* 只有「分支已经存在」才算成功，别的 422 要报出来，不能吞掉 */
+      var msg = (err && err.data && err.data.message) || (err && err.message) || '';
+      if (err && (err.status === 422 || err.status === 409) && /already exists/i.test(msg)) {
+        branchState = 1;
+        return true;
+      }
       throw err;
     });
   }
 
   /* ---------------- 文件读写 ---------------- */
-  function readTextFile(path) {
-    if (hasToken()) {
-      return gh('GET', apiUrl(path) + '?ref=' + encodeURIComponent(CFG.branch)).then(function (data) {
+  /* 走 api.github.com 读一个文件（带 token 时是私密的，不带时是匿名的，每小时 60 次） */
+  function apiTextFile(path) {
+    return request(apiUrl(path) + '?ref=' + encodeURIComponent(CFG.branch), { headers: authHeaders() }).then(function (res) {
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        var err = new Error('读取失败 ' + res.status);
+        err.status = res.status;
+        throw err;
+      }
+      return res.json().then(function (data) {
         if (!data || !data.content) return null;
         return { sha: data.sha || '', text: utf8Text(fromB64(data.content)) };
-      }, function (err) {
-        if (err && err.status === 404) return null;
-        throw err;
       });
-    }
+    });
+  }
+
+  function apiBinaryFile(path) {
+    return request(apiUrl(path) + '?ref=' + encodeURIComponent(CFG.branch), { headers: authHeaders() }).then(function (res) {
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        var err = new Error('读取失败 ' + res.status);
+        err.status = res.status;
+        throw err;
+      }
+      return res.json().then(function (data) {
+        if (!data || !data.content) return null;
+        return { sha: data.sha || '', bytes: fromB64(data.content) };
+      });
+    });
+  }
+
+  var rawBrokenAt = 0;   /* raw.githubusercontent.com 最近一次连不上的时间 */
+
+  function rawUsable() { return (Date.now() - rawBrokenAt) > 10 * 60 * 1000; }
+
+  function readTextFile(path) {
+    if (hasToken()) return apiTextFile(path);
+    if (!rawUsable()) return apiTextFile(path);
     return request(rawUrl(path), {}).then(function (res) {
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('读取失败 ' + res.status);
       return res.text().then(function (text) { return { sha: '', text: text }; });
+    }, function () {
+      /* raw.githubusercontent.com 打不开（国内挺常见）→ 记住，然后退回匿名 API 读 */
+      rawBrokenAt = Date.now();
+      return apiTextFile(path);
     });
   }
 
   function readBinaryFile(path) {
-    if (hasToken()) {
-      return gh('GET', apiUrl(path) + '?ref=' + encodeURIComponent(CFG.branch)).then(function (data) {
-        if (!data || !data.content) return null;
-        return { sha: data.sha || '', bytes: fromB64(data.content) };
-      }, function (err) {
-        if (err && err.status === 404) return null;
-        throw err;
-      });
-    }
+    if (hasToken()) return apiBinaryFile(path);
+    if (!rawUsable()) return apiBinaryFile(path);
     return request(rawUrl(path), {}).then(function (res) {
       if (res.status === 404) return null;
       if (!res.ok) throw new Error('读取失败 ' + res.status);
       return res.arrayBuffer().then(function (buf) { return { sha: '', bytes: new Uint8Array(buf) }; });
+    }, function () {
+      rawBrokenAt = Date.now();
+      return apiBinaryFile(path);
     });
   }
 
@@ -1033,7 +1073,7 @@
       if (global.document && global.document.hidden) return;
       if (!DEK) return;
       refresh();
-    }, POLL_MS);
+    }, hasToken() ? POLL_MS : 300000);   /* 没密钥的设备走匿名读取，5 分钟才问一次，省配额 */
     if (timer && typeof timer.unref === 'function') timer.unref();
   }
 
