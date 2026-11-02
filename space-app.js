@@ -161,68 +161,147 @@
     renderHomeNote();
   }
 
+  /* ---------------- 首页信息条：纪念日 / 最近回忆 / 今天想对你说 ---------------- */
+  function startDateObj() {
+    var s = String(state.profile.startDate || '');
+    var p = s.split('-');
+    if (p.length !== 3) return null;
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function nextMilestone() {
+    var start = startDateObj();
+    var days = daysSince();
+    if (!start || !days) return null;
+    var today = new Date();
+    var t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    var cands = [];
+
+    /* 下一个整百天（今天正好是整百天就算今天） */
+    var hundred = (days % 100 === 0) ? days : Math.ceil(days / 100) * 100;
+    cands.push({
+      date: new Date(start.getFullYear(), start.getMonth(), start.getDate() + (hundred - 1)),
+      label: '第 ' + hundred + ' 天'
+    });
+
+    /* 下一个周年 */
+    var years = t0.getFullYear() - start.getFullYear();
+    var anniv = new Date(start.getFullYear() + years, start.getMonth(), start.getDate());
+    if (anniv.getTime() < t0.getTime()) {
+      years += 1;
+      anniv = new Date(start.getFullYear() + years, start.getMonth(), start.getDate());
+    }
+    cands.push({ date: anniv, label: years + ' 周年' });
+
+    cands.sort(function (a, b) { return a.date.getTime() - b.date.getTime(); });
+    var pick = cands[0];
+    var diff = Math.round((new Date(pick.date.getFullYear(), pick.date.getMonth(), pick.date.getDate()) - t0) / 86400000);
+    return { label: pick.label, days: diff };
+  }
+
+  function dailyQuote() {
+    var list = (CFG.quotes && CFG.quotes.length) ? CFG.quotes : [];
+    if (!list.length) return '';
+    var today = new Date();
+    var dayIndex = Math.floor(new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime() / 86400000);
+    return String(list[dayIndex % list.length]);
+  }
+
+  function renderStats() {
+    var msEl = $('statMilestone');
+    var msSub = $('statMilestoneSub');
+    var memEl = $('statMemory');
+    var memSub = $('statMemorySub');
+    var quoteEl = $('statQuote');
+    if (!msEl && !memEl && !quoteEl) return;
+
+    var ms = nextMilestone();
+    if (msEl) msEl.textContent = ms ? ms.label : '还没设置';
+    if (msSub) {
+      if (!ms) msSub.textContent = '在「更多」里填开始日期';
+      else if (ms.days === 0) msSub.textContent = '就是今天';
+      else msSub.textContent = '还有 ' + ms.days + ' 天';
+    }
+
+    var latest = gallery()[0];
+    if (memEl) memEl.textContent = latest ? (latest.title || '一段回忆') : '还没有';
+    if (memSub) memSub.textContent = latest ? when(latest.at) : '去「我们的回忆」放一张';
+
+    if (quoteEl) {
+      var q = dailyQuote();
+      quoteEl.textContent = q || '';
+      var card = quoteEl.parentNode;
+      if (card) card.hidden = !q;
+    }
+  }
+
   /* ---------------- 同步状态 ---------------- */
   function statusText() {
     var st = S.status();
-    if (!st.configured) return '未接入云端';
+    if (!st.configured) return '只存在这台设备';
+    if (!st.secure) return '这个浏览器不支持加密';
+    if (st.locked) return '等待空间密码';
     if (!st.online) return st.pending ? '离线 · ' + st.pending + ' 条待上传' : '离线中';
     if (st.pending) return '待上传 ' + st.pending + ' 条';
     if (!st.lastSync) return '正在连接';
     var d = new Date(st.lastSync);
     var pad = function (n) { return n < 10 ? '0' + n : String(n); };
-    return '云端已连接 · ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    return '已同步 · ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
   function renderSyncChip() {
     var chip = $('syncChip');
     if (!chip) return;
     var st = S.status();
+    /* 没有接云端的时候标签就藏起来，别占地方 */
+    if (!st.configured) {
+      chip.hidden = true;
+      chip.textContent = '';
+      return;
+    }
+    chip.hidden = false;
     chip.textContent = statusText();
-    chip.classList.toggle('is-offline', st.configured ? !st.online : true);
-    chip.title = st.configured
-      ? '数据存在 LeanCloud，两台设备看到的是同一份内容'
-      : '还没填 LeanCloud 密钥，现在只存在这台设备的浏览器里';
+    chip.classList.toggle('is-offline', !st.online || st.locked);
+    chip.title = st.locked
+      ? '输入空间密码后才会解密云端内容'
+      : '内容加密存在 GitHub 仓库，两台设备看到的是同一份';
   }
 
-  /* ---------------- 回忆：照片压缩 ---------------- */
-  function dataURLtoBlob(dataUrl) {
-    var parts = String(dataUrl).split(',');
-    var mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
-    var bin = atob(parts[1] || '');
-    var arr = new Uint8Array(bin.length);
-    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    return new Blob([arr], { type: mime });
+  /* ---------------- 回忆：照片来自 GitHub 仓库的 photos/ 文件夹 ----------------
+     照片本身就是线上资源，所以「回忆」= 仓库里的照片 + 本地给它们配的文字。 */
+  function photoStore() {
+    return global.PhotoStore || null;
   }
-  function compressImage(file, maxSide, quality) {
-    return new Promise(function (resolve, reject) {
-      if (!global.URL || !global.URL.createObjectURL) { reject(new Error('浏览器不支持本地预览')); return; }
-      var url = global.URL.createObjectURL(file);
-      var img = new Image();
-      img.onload = function () {
-        try {
-          var scale = Math.min(1, maxSide / Math.max(img.width || 1, img.height || 1));
-          var w = Math.max(1, Math.round((img.width || 1) * scale));
-          var h = Math.max(1, Math.round((img.height || 1) * scale));
-          var canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          global.URL.revokeObjectURL(url);
-          if (canvas.toBlob) {
-            canvas.toBlob(function (blob) {
-              if (blob) resolve({ blob: blob, width: w, height: h });
-              else reject(new Error('图片压缩失败'));
-            }, 'image/jpeg', quality);
-          } else {
-            resolve({ blob: dataURLtoBlob(canvas.toDataURL('image/jpeg', quality)), width: w, height: h });
-          }
-        } catch (e) { reject(e); }
+
+  function gallery() {
+    var ps = photoStore();
+    var photos = (ps && ps.enabled) ? ps.cached() : [];
+    var byPhoto = {};
+    state.memories.forEach(function (r) { if (r && r.photoName) byPhoto[r.photoName] = r; });
+
+    var items = photos.map(function (p) {
+      var r = byPhoto[p.name];
+      return {
+        key: p.name,
+        name: p.name,
+        sha: p.sha,
+        photo: p.url,
+        title: (r && r.title) || '',
+        text: (r && r.text) || '',
+        at: (r && r.at) || p.at,
+        by: (r && r.by) || ''
       };
-      img.onerror = function () {
-        global.URL.revokeObjectURL(url);
-        reject(new Error('这张照片读不出来，iPhone 的 HEIC 请先在相册里转成 JPG'));
-      };
-      img.src = url;
     });
+
+    /* 只有文字、没有照片的回忆也要显示 */
+    state.memories.forEach(function (r) {
+      if (!r.photoName) {
+        items.push({ key: r.id, id: r.id, name: '', sha: '', photo: '', title: r.title, text: r.text, at: r.at, by: r.by });
+      }
+    });
+
+    items.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+    return items;
   }
 
   /* ---------------- 面板渲染 ---------------- */
@@ -234,38 +313,53 @@
   }
 
   function renderMemories() {
-    var html = intro('我们的回忆', '照片和故事都存在云端，两个人打开都能看到');
+    var ps = photoStore();
+    var items = gallery();
+    var canUpload = !!(ps && ps.enabled && ps.hasToken());
+    var html = intro('我们的回忆', (ps && ps.enabled)
+      ? '照片加密后存进仓库，哪台设备输入同一个空间密码都能看到'
+      : '先在 config.js 里配好 storage.repo，照片才有地方放');
     html += '<div class="panel-toolbar"><button class="bubu-primary" type="button" data-memory-new>＋ 添加一段回忆</button>' +
-      '<span class="panel-count">共 <b>' + state.memories.length + '</b> 条</span></div>';
+      '<span class="panel-count">共 <b>' + items.length + '</b> 条</span></div>';
+
     if (memoryEditorOpen) {
       html += '<div class="memory-editor" id="memoryEditor">' +
-        '<label class="memory-pick"><input type="file" accept="image/*" data-memory-file hidden><span class="memory-pick-box" id="memoryPickBox">选择照片</span></label>' +
+        '<label class="memory-pick"><input type="file" accept="image/*" data-memory-file hidden><span class="memory-pick-box" id="memoryPickBox">' +
+        (pendingPhoto ? '换一张照片' : '选择照片') + '</span></label>' +
         '<div class="memory-preview" id="memoryPreview"' + (pendingPhoto ? '' : ' hidden') + '>' +
         (pendingPhoto ? '<img src="' + esc(pendingPhoto.preview) + '" alt="预览">' : '') + '</div>' +
         '<input class="bubu-field" id="memoryTitle" type="text" maxlength="40" placeholder="给这段回忆起个名字">' +
         '<textarea class="bubu-field bubu-note-field" id="memoryText" rows="3" maxlength="300" placeholder="那天发生了什么……"></textarea>' +
-        '<div class="bubu-form-actions"><button class="bubu-primary" type="button" data-memory-save>保存到云端</button><button type="button" data-memory-cancel>取消</button></div>' +
-        '<p class="panel-note">照片会自动压到长边 1200 像素再上传，省流量也省空间。</p>' +
+        '<div class="bubu-form-actions"><button class="bubu-primary" type="button" data-memory-save>保存</button>' +
+        '<button type="button" data-memory-cancel>取消</button></div>' +
+        '<p class="panel-note">' + (canUpload
+          ? '照片会压到长边 1400 像素、加密后提交进仓库，滚到跟前才解密显示。'
+          : '这台设备还没有写入密钥：去「设置 → 写入密钥」贴一次就能传照片，也可以只写文字。') + '</p>' +
         '</div>';
     }
-    if (!state.memories.length) {
-      html += empty('♡', '还没有回忆', '把照片和当时的心情放进来，对方刷新就能看到。');
-    } else {
-      var items = state.memories.slice().sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
-      html += '<div class="memory-grid">';
-      items.forEach(function (item) {
-        html += '<article class="memory-card" data-memory-id="' + esc(item.id) + '">' +
-          '<div class="memory-photo">' + (item.photo
-            ? '<img loading="lazy" decoding="async" src="' + esc(item.photo) + '" alt="' + esc(item.title || '回忆') + '">'
-            : '<span class="memory-no-photo">♡</span>') + '</div>' +
-          '<div class="memory-info"><b>' + esc(item.title || '没有名字的一段') + '</b>' +
-          (item.text ? '<p>' + esc(item.text) + '</p>' : '') +
-          '<small>' + esc(when(item.at)) + (item.by ? ' · ' + esc(identityLabel(item.by)) : '') + '</small></div>' +
-          '<button class="panel-del" type="button" data-memory-del="' + esc(item.id) + '" aria-label="删除这条回忆">×</button>' +
-          '</article>';
-      });
-      html += '</div>';
+
+    if (!items.length) {
+      html += empty('♡', '还没有回忆', '放一张照片进来，它会加密存进仓库，两个人都能看到。');
+      return html;
     }
+
+    html += '<div class="memory-grid">';
+    items.forEach(function (item) {
+      var photoHtml = item.name
+        ? '<img loading="lazy" decoding="async" data-photo="' + esc(item.name) + '" alt="' + esc(item.title || '回忆') + '">'
+        : '<span class="memory-no-photo">♡</span>';
+      var key = item.name || item.id || '';
+      html += '<article class="memory-card" data-memory-id="' + esc(key) + '">' +
+        '<div class="memory-photo">' + photoHtml + '</div>' +
+        '<div class="memory-info"><b>' + esc(item.title || (item.name ? '一段回忆' : '没有名字的一段')) + '</b>' +
+        (item.text ? '<p>' + esc(item.text) + '</p>' : '') +
+        '<small>' + esc(when(item.at)) + (item.by ? ' · ' + esc(identityLabel(item.by)) : '') + '</small></div>' +
+        (canUpload
+          ? '<button class="panel-del" type="button" data-memory-del="' + esc(key) + '" data-memory-sha="' + esc(item.sha || '') + '" aria-label="删除这条回忆">×</button>'
+          : '') +
+        '</article>';
+    });
+    html += '</div>';
     return html;
   }
 
@@ -369,8 +463,27 @@
     return html;
   }
 
+  /* 照片仓库的状态（异步，渲染完再填） */
+  function fillPhotoStats() {
+    var el = $('photoStats');
+    if (!el) return;
+    var ps = photoStore();
+    if (!ps || !ps.enabled) {
+      el.textContent = 'config.js 里还没配 storage.repo，照片没地方放';
+      return;
+    }
+    if (!S.hasKey || !S.hasKey()) {
+      el.textContent = '还没解锁：输入空间密码后照片才会解密';
+      return;
+    }
+    var rows = ps.cached();
+    el.textContent = (ps.hasToken() ? '可以上传' : '只读（没贴写入密钥）') +
+      ' · 仓库里已有 ' + rows.length + ' 张照片' +
+      (ps.lastError() ? ' · ' + ps.lastError() : '');
+  }
+
   function renderSettings() {
-    var html = intro('设置', '改动会同步到云端，两台设备保持一致');
+    var html = intro('设置', S.configured ? '内容加密存在 GitHub，两台设备共享' : '这些设置只保存在这台设备上');
     html += '<div class="setting-block"><b>我是</b><div class="identity-row">';
     [['cat', '小猫'], ['fish', '小鱼'], ['us', '我们']].forEach(function (pair) {
       html += '<button type="button" class="identity-chip' + (identity() === pair[0] ? ' is-active' : '') + '" data-identity="' + pair[0] + '">' + pair[1] + '</button>';
@@ -380,20 +493,34 @@
     html += '<div class="setting-block"><b>恋爱开始日期</b>' +
       '<div class="panel-inline-form"><input class="bubu-field" id="startDate" type="date" value="' + esc(state.profile.startDate || '') + '">' +
       '<button class="bubu-primary" type="button" data-profile-save>保存</button></div>' +
-      '<small>首页的「一起走过第几天」按这一天算</small></div>';
+      '<small>首页的「一起走过第几天」和纪念日都按这一天算</small></div>';
+
+    var ps = photoStore();
+    html += '<div class="setting-block"><b>写入密钥</b>' +
+      '<p class="panel-note" id="photoStats">正在检查…</p>' +
+      '<input class="bubu-field" id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="GitHub 写入密钥（只存这台设备）">' +
+      '<div class="bubu-form-actions">' +
+      '<button class="bubu-primary" type="button" data-photo-token-save>保存密钥</button>' +
+      '<button type="button" data-photo-refresh>立即同步</button>' +
+      '<button type="button" data-photo-token-clear>清除</button></div>' +
+      '<small>' + (ps && ps.enabled
+        ? '内容会加密后提交到 <code>' + esc(ps.repo) + '</code> 的 <code>' + esc(S.config.branch) + '</code> 分支；密钥只存在这台设备'
+        : '先在 config.js 里配好 storage.repo') + '</small></div>';
 
     html += '<div class="setting-block"><b>空间密码</b>' +
       '<input class="bubu-field" id="oldPassword" type="password" autocomplete="current-password" placeholder="现在的密码">' +
       '<input class="bubu-field" id="newPassword" type="password" autocomplete="new-password" placeholder="新密码（至少 4 位）">' +
       '<input class="bubu-field" id="newPassword2" type="password" autocomplete="new-password" placeholder="再输一次新密码">' +
       '<div class="bubu-form-actions"><button class="bubu-primary" type="button" data-password-save>改密码</button></div>' +
-      '<small>密码只存加盐哈希，改完两台设备都用新密码</small></div>';
+      '<small>只换包裹密钥的那一层，仓库里的文件不会重新上传；改完两台设备都要用新密码</small></div>';
 
-    html += '<div class="setting-block"><b>同步</b>' +
-      '<p class="panel-note" id="syncDetail">' + esc(statusText()) + ' · ' + esc(S.config.serverURL || '未配置服务器') + '</p>' +
-      '<div class="bubu-form-actions"><button class="bubu-primary" type="button" data-sync-now>立即同步</button>' +
-      '<button type="button" data-sync-test>云端自检</button></div>' +
-      '<div class="selftest-out" id="selftestOut" hidden></div></div>';
+    if (S.configured) {
+      html += '<div class="setting-block"><b>同步</b>' +
+        '<p class="panel-note" id="syncDetail">' + esc(statusText()) + ' · ' + esc(S.config.repo + ' · ' + S.config.branch) + '</p>' +
+        '<div class="bubu-form-actions"><button class="bubu-primary" type="button" data-sync-now>立即同步</button>' +
+        '<button type="button" data-sync-test>云端自检</button></div>' +
+        '<div class="selftest-out" id="selftestOut" hidden></div></div>';
+    }
 
     return html;
   }
@@ -412,6 +539,11 @@
     else if (name === 'settings') html = renderSettings();
     if (html === null) return false;
     el.innerHTML = html;
+    if (name === 'settings') fillPhotoStats();
+    if (name === 'memories') {
+      var ps = photoStore();
+      if (ps && ps.hydrate) ps.hydrate(el);
+    }
     var title = document.getElementById('bubuPanelTitle');
     if (title) {
       var names = {
@@ -428,6 +560,7 @@
     pullAll();
     renderDays();
     renderHomeNote();
+    renderStats();
     renderSyncChip();
     if (!currentBody || !currentPanel) return;
     var active = document.activeElement;
@@ -441,13 +574,13 @@
     var item = stamp();
     item.title = draft.title;
     item.text = draft.text;
-    item.photo = draft.photo || '';
+    item.photoName = draft.photoName || '';
     return S.mutate('memories', function (doc) {
       var items = Array.isArray(doc.items) ? doc.items : [];
       items.push(item);
       return { items: items };
     }).then(function () {
-      toast('这段回忆已经存到云端');
+      toast(draft.photoName ? '照片已经提交进仓库' : '这段回忆记下来了');
     });
   }
 
@@ -476,17 +609,15 @@
       var title = titleEl ? titleEl.value.trim() : '';
       var text = textEl ? textEl.value.trim() : '';
       if (!title && !text && !pendingPhoto) { toast('写点什么，或者挑一张照片'); return true; }
-      if (!S.configured) { toast('还没有接入云端，填好 config.js 的 cloud 就能保存'); return true; }
+      var ps = photoStore();
+      if (pendingPhoto && (!ps || !ps.enabled)) { toast('config.js 里还没配 storage.repo，照片没地方放'); return true; }
+      if (pendingPhoto && !ps.hasToken()) { toast('这台设备还没有上传密钥，去「设置 → 照片仓库」贴一次'); return true; }
       busy = true;
       var photoPromise = pendingPhoto
-        ? S.uploadFile(pendingPhoto.blob, 'memory-' + Date.now() + '.jpg').then(function (r) { return r.url; }).catch(function (err) {
-          /* 上传失败就不要把整条记录弄丢：文字先存，照片后面再补 */
-          toast('照片上传失败（' + (err.message || '网络') + '），先存文字');
-          return '';
-        })
+        ? ps.upload(pendingPhoto.blob).then(function (entry) { return entry.name; })
         : Promise.resolve('');
-      photoPromise.then(function (photo) {
-        return addMemory({ title: title || '一段回忆', text: text, photo: photo });
+      photoPromise.then(function (photoName) {
+        return addMemory({ title: title || (photoName ? '一段回忆' : '记一笔'), text: text, photoName: photoName });
       }).then(function () {
         busy = false;
         memoryEditorOpen = false;
@@ -500,12 +631,27 @@
     }
     var memDel = hit('[data-memory-del]');
     if (memDel) {
-      var mid = memDel.getAttribute('data-memory-del');
-      if (global.confirm && !global.confirm('删掉这段回忆？')) return true;
-      S.mutate('memories', function (doc) {
-        var items = Array.isArray(doc.items) ? doc.items : [];
-        return { items: items.filter(function (it) { return it.id !== mid; }) };
-      }).then(function () { toast('已经删掉'); renderPanel('memories', currentBody); });
+      var key = memDel.getAttribute('data-memory-del');
+      var sha = memDel.getAttribute('data-memory-sha') || '';
+      if (global.confirm && !global.confirm('删掉这段回忆？仓库里那张照片也会一起删掉。')) return true;
+      var ps2 = photoStore();
+      var removeRemote = (ps2 && sha)
+        ? ps2.remove(key, sha).catch(function (err) { toast('仓库里的照片没删掉：' + (err.message || '网络')); })
+        : Promise.resolve();
+      removeRemote.then(function () {
+        return S.mutate('memories', function (doc) {
+          var items = Array.isArray(doc.items) ? doc.items : [];
+          return {
+            items: items.filter(function (it) {
+              return it.photoName !== key && it.id !== key;
+            })
+          };
+        });
+      }).then(function () {
+        toast('已经删掉');
+        renderPanel('memories', currentBody);
+        renderStats();
+      });
       return true;
     }
 
@@ -654,7 +800,41 @@
       }).then(function () {
         toast('开始日期记住啦');
         renderDays();
+        renderStats();
         renderPanel('settings', currentBody);
+      });
+      return true;
+    }
+    if (hit('[data-photo-token-save]')) {
+      var tk = $('ghToken');
+      var value = tk ? tk.value.trim() : '';
+      if (!value) { toast('先把密钥粘进来'); return true; }
+      if (!photoStore() || !photoStore().enabled) { toast('config.js 里还没配 storage.repo'); return true; }
+      photoStore().setToken(value);
+      if (tk) tk.value = '';
+      toast('密钥存好了，正在同步…');
+      fillPhotoStats();
+      renderPanel('settings', currentBody);
+      S.refresh().then(function () { refreshUI(); }, function () { /* 网络不好就算了 */ });
+      return true;
+    }
+    if (hit('[data-photo-token-clear]')) {
+      if (photoStore()) photoStore().clearToken();
+      toast('密钥已清除，这台设备只能看，不能改');
+      renderPanel('settings', currentBody);
+      return true;
+    }
+    if (hit('[data-photo-refresh]')) {
+      var ps3 = photoStore();
+      if (!ps3 || !ps3.enabled) { toast('config.js 里还没配 storage.repo'); return true; }
+      toast('正在同步…');
+      ps3.list(true).then(function (rows) {
+        toast('同步完成，仓库里现在有 ' + rows.length + ' 张照片');
+        renderStats();
+        if (currentPanel === 'memories') renderPanel('memories', currentBody);
+        else renderPanel('settings', currentBody);
+      }).catch(function (err) {
+        toast('同步失败：' + ((err && err.message) || '网络'));
       });
       return true;
     }
@@ -671,9 +851,15 @@
         var doc = { enabled: true, salt: salt, hash: S.hashPassword(newPwd, salt), at: Date.now() };
         /* 先把本机票据换成新的，否则“旧票据失效”的检查会把自己踢出去 */
         S.writeTicket(doc.hash.slice(0, 12));
-        return S.set('access', doc).then(function () {
-          toast('密码改好了，两台设备都用新密码');
+        /* 云端：用新密码重新包裹数据密钥（文件本身不用重传） */
+        var rewrap = (S.configured && S.changePassword) ? S.changePassword(newPwd) : Promise.resolve(true);
+        return rewrap.then(function () {
+          return S.set('access', doc);
+        }).then(function () {
+          toast('密码改好了，另一台设备也要用新密码进来');
           renderPanel('settings', currentBody);
+        }, function (err) {
+          toast('改密码失败：' + ((err && err.message) || '网络'));
         });
       });
       return true;
@@ -706,11 +892,13 @@
     if (target.closest('[data-memory-file]')) {
       var file = target.files && target.files[0];
       if (!file) return true;
+      var ps = photoStore();
+      if (!ps || !ps.enabled) { toast('config.js 里还没配 storage.repo，照片没地方放'); return true; }
       toast('正在压缩照片……');
-      compressImage(file, 1200, 0.82).then(function (res) {
+      ps.prepare(file).then(function (res) {
         pendingPhoto = {
           blob: res.blob,
-          preview: global.URL.createObjectURL(res.blob),
+          preview: res.preview,
           width: res.width,
           height: res.height
         };
@@ -721,7 +909,7 @@
           preview.hidden = false;
           preview.innerHTML = '<img src="' + esc(pendingPhoto.preview) + '" alt="预览">';
         }
-        toast('照片准备好了（' + Math.round(res.blob.size / 1024) + 'KB）');
+        toast('照片准备好了（' + Math.round(res.blob.size / 1024) + 'KB），点保存就提交进仓库');
       }).catch(function (err) {
         toast(err.message || '这张照片用不了');
       });
@@ -734,29 +922,64 @@
   function accessDoc() {
     return state.access;
   }
+
+  /* 密码同时是解密钥匙：先解锁云端（解开 meta 里的数据密钥），再比对密码哈希 */
+  var unlockHint = '';
   function verifyPassword(input) {
-    var doc = state.access;
-    if (doc && doc.hash) {
-      return Promise.resolve(S.hashPassword(input, doc.salt) === doc.hash);
-    }
-    /* 云端还没有密码：用 config.js 里那个进来，并把它写进云端。
-       这里必须是「只创建、不覆盖」：两台设备同时首次进入时，
-       后到的那台不能把对方刚设好的密码改掉。 */
     var fallback = String((CFG.access && CFG.access.password) || '');
-    if (!fallback || String(input) !== fallback) return Promise.resolve(false);
-    var salt = S.makeSalt();
-    var seeded = { enabled: true, salt: salt, hash: S.hashPassword(fallback, salt), at: Date.now() };
-    return S.mutate('access', function (remote) {
-      if (remote && remote.hash) return null;      /* 别人已经设过了，不动它 */
-      return seeded;
-    }).then(function (finalDoc) {
-      var use = (finalDoc && finalDoc.hash) ? finalDoc : seeded;
-      state.access = use;
-      return S.hashPassword(input, use.salt) === use.hash;
-    }, function () {
-      /* 断网：先让本次进来，等有网再补写 */
-      state.access = seeded;
-      return true;
+    var st = S.status();
+    var open;
+    unlockHint = '';
+    if (!S.configured || !st.secure) {
+      /* 本机模式 / 浏览器不支持加密：只做密码门 */
+      open = Promise.resolve(true);
+    } else {
+      open = S.hasSpace().then(function (exists) {
+        if (!exists) {
+          /* 云端还没有空间：第一次只能用 config.js 里那个密码把它建起来，
+             这样两台设备第一次进来用的密码一定是同一个 */
+          if (!fallback || String(input) !== fallback) return false;
+          if (!S.hasToken()) {
+            unlockHint = '这台设备还没有写入密钥，没法建立云端空间：先在 config.js 的 storage.token 里填上，或在「设置 → 写入密钥」里贴一次。';
+            return false;
+          }
+          return S.createSpace(input).then(function () { return true; }, function (err) {
+            unlockHint = '建立云端空间失败：' + ((err && err.message) || '网络不通');
+            return false;
+          });
+        }
+        return S.unlock(input).then(function () { return true; }, function () { return false; });
+      }, function () {
+        /* 读不到 meta（断网）：先按本机缓存进来，等有网再说 */
+        return true;
+      });
+    }
+    return open.then(function (ok) {
+      if (!ok) return false;
+      return S.refresh().then(function () { pullAll(); }, function () { pullAll(); }).then(function () {
+        var doc = state.access;
+        if (doc && doc.hash) return S.hashPassword(input, doc.salt) === doc.hash;
+        /* 云端还没有密码记录：用 config.js 里那个进来，并把它写进云端。
+           这里必须是「只创建、不覆盖」：两台设备同时首次进入时，
+           后到的那台不能把对方刚设好的密码改掉。 */
+        if (!fallback || String(input) !== fallback) return false;
+        var salt = S.makeSalt();
+        var seeded = { enabled: true, salt: salt, hash: S.hashPassword(fallback, salt), at: Date.now() };
+        return S.mutate('access', function (remote) {
+          if (remote && remote.hash) return null;
+          return seeded;
+        }).then(function (finalDoc) {
+          var use = (finalDoc && finalDoc.hash) ? finalDoc : seeded;
+          state.access = use;
+          return S.hashPassword(input, use.salt) === use.hash;
+        }, function () {
+          state.access = seeded;
+          return true;
+        });
+      });
+    }).then(function (ok) {
+      if (ok) { renderSyncChip(); refreshUI(); }
+      return ok;
     });
   }
   function ticketMatches() {
@@ -788,6 +1011,7 @@
     pullAll();
     renderDays();
     renderHomeNote();
+    renderStats();
     renderSyncChip();
 
     /* 第一次打开：把 config.js 里的开始日期写进云端，之后以云端为准 */
@@ -811,6 +1035,13 @@
       pullAll();
       refreshUI();
       checkDueReminders();
+      /* 仓库里的照片：有就拿来展示，没有也不影响其他功能 */
+      var ps = photoStore();
+      if (ps && ps.enabled) {
+        ps.list().then(function () {
+          refreshUI();
+        }).catch(function () { /* 网络不行就先不显示相册 */ });
+      }
     });
 
     /* 番茄钟倒计时：只刷新面板里的数字，不重新渲染整块 */
@@ -835,6 +1066,7 @@
     handleChange: handleChange,
     refreshUI: refreshUI,
     verifyPassword: verifyPassword,
+    unlockHint: function () { return unlockHint; },
     ticketMatches: ticketMatches,
     daysSince: daysSince,
     state: state,

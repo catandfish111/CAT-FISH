@@ -839,6 +839,17 @@ textarea.bubu-field{min-height:110px;padding:10px 11px;resize:vertical;line-heig
 .bubu-note-widget{pointer-events:none;}
 .bubu-note-widget>button{pointer-events:auto;}
 
+/* 首页信息条：纪念日 / 最近回忆 / 今天想对你说 */
+.space-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 2px;text-align:left;}
+.stat-card{padding:10px 11px;border:1px solid rgba(255,255,255,.8);border-radius:12px;background:rgba(255,255,255,.6);box-shadow:0 8px 18px rgba(48,103,124,.07);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);}
+.stat-card>span{display:block;color:#8ba7ae;font-size:9px;letter-spacing:.1em;}
+.stat-card>b{display:block;margin-top:3px;color:#37697c;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stat-card>small{display:block;margin-top:2px;color:#9db4ba;font-size:9.5px;}
+.stat-card-quote{grid-column:1 / -1;background:rgba(255,246,249,.74);border-color:rgba(232,150,168,.42);}
+.stat-card-quote>b{font-size:12px;line-height:1.65;white-space:normal;color:#a05a72;font-weight:400;}
+/* 照片还没解析出来（IndexedDB 读地址是异步的）时先别显示破图 */
+.memory-photo img:not([src]),.memory-photo img.is-missing{visibility:hidden;}
+
 /* 面板里的小工具条 */
 .panel-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 12px;}
 .panel-toolbar .bubu-primary{min-height:34px;padding:7px 13px;border-radius:8px;background:#e9829d;color:#fff;box-shadow:0 6px 12px rgba(226,119,145,.18);font-size:11px;}

@@ -95,7 +95,8 @@
   }
   function rejectAccess() {
     if (!accessError) return;
-    accessError.textContent = '密码不对，再想一想吧。';
+    var hint = (typeof SpaceApp !== 'undefined' && SpaceApp.unlockHint) ? SpaceApp.unlockHint() : '';
+    accessError.textContent = hint || '密码不对，再想一想吧。';
     if (accessPassword) {
       accessPassword.classList.remove('is-invalid');
       void accessPassword.offsetWidth;
@@ -107,6 +108,14 @@
   /* 票据里记的是密码哈希的前 12 位：改了密码，旧票据自动失效 */
   function autoUnlock() {
     if (!accessEnabled()) { unlockSpace(); return true; }
+    /* 云端内容是用空间密码加密的：这台设备没有解密钥匙时，票据再有效也进不去 */
+    if (typeof Space !== 'undefined' && Space.configured && Space.hasKey && !Space.hasKey()) {
+      if (typeof SpaceApp !== 'undefined' && SpaceApp.ticketMatches()) {
+        if (accessError) accessError.textContent = '请输入空间密码，解开这台设备上的内容。';
+      }
+      if (accessPassword) { try { accessPassword.focus(); } catch (e) { /* 忽略 */ } }
+      return false;
+    }
     if (typeof SpaceApp !== 'undefined' && SpaceApp.ticketMatches()) { unlockSpace(); return true; }
     if (accessPassword) { try { accessPassword.focus(); } catch (e) { /* 忽略 */ } }
     return false;
@@ -1358,6 +1367,23 @@
   }
   btnSkip.addEventListener('click', advance);
   bigHeart.addEventListener('click', advance);
+  /* 落款出现后，「轻触重新看一遍」要真的从头再看一遍 */
+  bigHeart.addEventListener('click', function () {
+    if (!bigHeart.classList.contains('on')) return;   /* 还没到落款，交给上面的 advance */
+    restartLetter();
+  });
+
+  function restartLetter() {
+    if (!app || app.dataset.phase !== 'reading') return;
+    TOKEN = {};              /* 让旧流程的回调全部作废 */
+    running = true;
+    resetLetter();
+    setStageHead(0, {});
+    stageNo.textContent = '01';
+    paperScroll.scrollTop = 0;
+    fx.rainHearts(6);
+    runStages();
+  }
 
   function setStageHead(i, stage) {
     stageNo.textContent = String(i + 1).padStart(2, '0');
