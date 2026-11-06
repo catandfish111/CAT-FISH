@@ -31,7 +31,7 @@
   var TICKET_KEY = 'catfish-space-unlocked-v1';
   var DEK_KEY = 'catfish-space-dek-v1';
   var TOKEN_KEY = 'catfish-gh-token';          /* 和 photo-store 共用同一个令牌 */
-  var TIMEOUT = 25000;
+  var TIMEOUT = 12000;
   var POLL_MS = 45000;
 
   /* ---------------- 配置 ---------------- */
