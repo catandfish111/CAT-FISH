@@ -962,30 +962,48 @@
     }
     return open.then(function (ok) {
       if (!ok) return false;
-      return S.refresh().then(function () { pullAll(); }, function () { pullAll(); }).then(function () {
-        var doc = state.access;
-        if (doc && doc.hash) return S.hashPassword(input, doc.salt) === doc.hash;
-        /* 云端还没有密码记录：用 config.js 里那个进来，并把它写进云端。
-           这里必须是「只创建、不覆盖」：两台设备同时首次进入时，
-           后到的那台不能把对方刚设好的密码改掉。 */
-        if (!fallback || String(input) !== fallback) return false;
-        var salt = S.makeSalt();
-        var seeded = { enabled: true, salt: salt, hash: S.hashPassword(fallback, salt), at: Date.now() };
-        return S.mutate('access', function (remote) {
-          if (remote && remote.hash) return null;
-          return seeded;
-        }).then(function (finalDoc) {
-          var use = (finalDoc && finalDoc.hash) ? finalDoc : seeded;
-          state.access = use;
-          return S.hashPassword(input, use.salt) === use.hash;
-        }, function () {
-          state.access = seeded;
-          return true;
-        });
+      /* 解密成功就等于密码对了：先放人进门，云端最新内容在后台拉，
+         不然要多等两三个来回（这正是「输完密码要愣一会儿」的来源） */
+      var cached = state.access;
+      if (cached && cached.hash) {
+        if (S.hashPassword(input, cached.salt) !== cached.hash) return false;
+        S.writeTicket(cached.hash.slice(0, 12));
+      }
+      pullAll();
+      renderSyncChip();
+      refreshUI();
+      S.refresh().then(function () {
+        pullAll();
+        renderSyncChip();
+        refreshUI();
+        seedAccess(input);
+      }, function () {
+        seedAccess(input);
       });
-    }).then(function (ok) {
-      if (ok) { renderSyncChip(); refreshUI(); }
-      return ok;
+      return true;
+    });
+  }
+
+  /* 云端还没有密码记录时补一条。必须是「只创建、不覆盖」：
+     两台设备同时首次进入时，后到的那台不能把对方刚设好的密码改掉。 */
+  function seedAccess(input) {
+    if (state.access && state.access.hash) return Promise.resolve(state.access);
+    var fallback = String((CFG.access && CFG.access.password) || '');
+    if (!fallback || String(input) !== fallback) return Promise.resolve(null);
+    var salt = S.makeSalt();
+    var seeded = { enabled: true, salt: salt, hash: S.hashPassword(fallback, salt), at: Date.now() };
+    return S.mutate('access', function (remote) {
+      if (remote && remote.hash) return null;
+      return seeded;
+    }).then(function (finalDoc) {
+      var use = (finalDoc && finalDoc.hash) ? finalDoc : seeded;
+      state.access = use;
+      if (use.hash) S.writeTicket(use.hash.slice(0, 12));
+      renderSyncChip();
+      return use;
+    }, function () {
+      state.access = seeded;
+      return seeded;
     });
   }
   /* 把密码门重新盖上来：贴好写入密钥后需要再解锁一次 */
