@@ -422,34 +422,63 @@
     });
   }
 
-  var rawBrokenAt = 0;   /* raw.githubusercontent.com 最近一次连不上的时间 */
+  /* raw.githubusercontent.com 连不上 / API 被限流时的时间戳，10 分钟内换另一条路 */
+  var rawBrokenAt = 0;
+  var apiBrokenAt = 0;
 
   function rawUsable() { return (Date.now() - rawBrokenAt) > 10 * 60 * 1000; }
+  function apiUsable() { return (Date.now() - apiBrokenAt) > 10 * 60 * 1000; }
 
-  function readTextFile(path) {
-    if (hasToken()) return apiTextFile(path);
-    if (!rawUsable()) return apiTextFile(path);
+  function rawTextFile(path) {
     return request(rawUrl(path), {}).then(function (res) {
       if (res.status === 404) return null;
-      if (!res.ok) throw new Error('读取失败 ' + res.status);
+      if (!res.ok) {
+        var err = new Error('读取失败 ' + res.status);
+        err.status = res.status;
+        throw err;
+      }
       return res.text().then(function (text) { return { sha: '', text: text }; });
-    }, function () {
-      /* raw.githubusercontent.com 打不开（国内挺常见）→ 记住，然后退回匿名 API 读 */
-      rawBrokenAt = Date.now();
-      return apiTextFile(path);
+    });
+  }
+
+  function rawBinaryFile(path) {
+    return request(rawUrl(path), {}).then(function (res) {
+      if (res.status === 404) return null;
+      if (!res.ok) {
+        var err = new Error('读取失败 ' + res.status);
+        err.status = res.status;
+        throw err;
+      }
+      return res.arrayBuffer().then(function (buf) { return { sha: '', bytes: new Uint8Array(buf) }; });
+    });
+  }
+
+  /* 读文件：优先走 api.github.com（更稳，带不带 token 都行），
+     只有在被限流或连不上时才换 raw.githubusercontent.com。
+     反过来会很坑：raw 被墙时第一个请求要等到超时，进空间就变成「几十秒没反应」。 */
+  function readTextFile(path) {
+    if (!apiUsable()) return rawTextFile(path);
+    return apiTextFile(path).catch(function (err) {
+      if (err && err.status && err.status !== 403 && err.status !== 429) throw err;
+      if (err && !err.status) apiBrokenAt = Date.now();
+      if (!rawUsable()) throw err;
+      return rawTextFile(path).then(null, function () {
+        rawBrokenAt = Date.now();
+        throw err;
+      });
     });
   }
 
   function readBinaryFile(path) {
-    if (hasToken()) return apiBinaryFile(path);
-    if (!rawUsable()) return apiBinaryFile(path);
-    return request(rawUrl(path), {}).then(function (res) {
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error('读取失败 ' + res.status);
-      return res.arrayBuffer().then(function (buf) { return { sha: '', bytes: new Uint8Array(buf) }; });
-    }, function () {
-      rawBrokenAt = Date.now();
-      return apiBinaryFile(path);
+    if (!apiUsable()) return rawBinaryFile(path);
+    return apiBinaryFile(path).catch(function (err) {
+      if (err && err.status && err.status !== 403 && err.status !== 429) throw err;
+      if (err && !err.status) apiBrokenAt = Date.now();
+      if (!rawUsable()) throw err;
+      return rawBinaryFile(path).then(null, function () {
+        rawBrokenAt = Date.now();
+        throw err;
+      });
     });
   }
 
@@ -468,6 +497,7 @@
       if (shaHint) body.sha = shaHint;
       return gh('PUT', apiUrl(path), body);
     }).then(function (res) {
+      dropTree();                                    /* 本地刚写过，清单作废 */
       return (res && res.content && res.content.sha) || '';
     }, function (err) {
       if (err && (err.status === 409 || err.status === 422)) err.conflict = true;
@@ -479,15 +509,20 @@
     if (!hasToken()) return Promise.reject(new Error('这台设备没有写入密钥'));
     return getMeta(path).then(function (meta) {
       if (!meta) return false;
-      return gh('DELETE', apiUrl(path), { message: message, sha: meta.sha, branch: CFG.branch }).then(function () { return true; });
+      return gh('DELETE', apiUrl(path), { message: message, sha: meta.sha, branch: CFG.branch }).then(function () {
+        dropTree();
+        return true;
+      });
     });
   }
 
+  /* 一次拿到 data 分支的文件清单（匿名也能读公开仓库），
+     这样就不用把每个文档都读一遍，只读变了的 */
   function treeMap() {
-    if (!hasToken()) return Promise.resolve(null);
     return request(CFG.apiBase + '/repos/' + CFG.repo + '/git/trees/' + encodeURIComponent(CFG.branch) + '?recursive=1', { headers: authHeaders() })
       .then(function (res) {
         if (res.status === 404 || res.status === 409) return {};
+        if (res.status === 401 || res.status === 403) { apiBrokenAt = Date.now(); return null; }
         if (!res.ok) return null;
         return res.json().then(function (data) {
           var map = {};
@@ -500,16 +535,46 @@
       .catch(function () { return null; });
   }
 
+  /* 把「取文件清单」这一步和「密码派生」并行起来，省掉一个来回。
+     注意清单会过期：自己写过东西、或者清单太旧，都必须重新取一次，
+     否则「密码还没输的这段时间里对方刚加的文件」会被漏掉。 */
+  var treePrefetch = null;
+  var treePrefetchAt = 0;
+  var treeDirty = false;
+
+  function prefetchTree() {
+    if (!configured || treePrefetch) return;
+    treePrefetchAt = Date.now();
+    treePrefetch = treeMap();
+    treePrefetch.then(function () { }, function () { });   /* 别留未处理的 rejection */
+  }
+
+  function dropTree() {
+    treePrefetch = null;
+    treeDirty = true;
+  }
+
+  function takeTree() {
+    var p = treePrefetch;
+    treePrefetch = null;
+    var fresh = p && !treeDirty && (Date.now() - treePrefetchAt) < 120000;
+    treeDirty = false;
+    return fresh ? p : treeMap();
+  }
+
   /* ---------------- 空间的建立 / 解锁 ---------------- */
   function metaPath() { return CFG.dir + '/meta.json'; }
 
-  function readMeta() {
+  function readMeta(force) {
+    /* 刚读过就复用：省掉一次往返（首次进空间时最明显） */
+    if (!force && META && META._at && (Date.now() - META._at) < 60000) return Promise.resolve(META);
     return readTextFile(metaPath()).then(function (file) {
       if (!file) return null;
       var meta = null;
       try { meta = JSON.parse(file.text); } catch (e) { meta = null; }
       if (!meta || !meta.salt || !meta.wrap) return null;
       meta.sha = file.sha;
+      meta._at = Date.now();
       return meta;
     });
   }
@@ -540,10 +605,13 @@
   }
 
   function openWithMeta(meta, password) {
+    /* 密码派生要几百毫秒，这段时间和「取文件清单」没有依赖关系，并行做掉 */
+    prefetchTree();
     return deriveKek(password, fromB64(meta.salt), meta.iter).then(function (kek) {
       return aesDecrypt(kek, fromB64(meta.wrap)).then(function (dekBytes) {
         return importDek(dekBytes).then(function (key) {
           META = meta;
+          META._at = Date.now();
           rememberDek(key, dekBytes);
           emit('status', status());
           return true;
@@ -577,6 +645,7 @@
     }).then(function (sha) {
       return importDek(dekBytes).then(function (key) {
         meta.sha = sha;
+        meta._at = Date.now();
         META = meta;
         rememberDek(key, dekBytes);
         emit('status', status());
@@ -681,7 +750,7 @@
 
   function fetchAll() {
     if (!configured || !DEK) return Promise.resolve(false);
-    return treeMap().then(function (map) {
+    return takeTree().then(function (map) {
       var jobs = [];
       for (var i = 0; i < CFG.docs.length; i += 1) jobs.push(syncDoc(CFG.docs[i], map));
       return Promise.all(jobs);
@@ -1059,6 +1128,8 @@
     }
     return restoreDek().then(function (ok) {
       if (!ok) {
+        /* 还没有密钥：先把文件清单问一遍，等用户输密码时直接就能用（省一个来回） */
+        prefetchTree();
         emit('status', status());
         return false;
       }

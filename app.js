@@ -133,20 +133,29 @@
     if (!accessPassword) return;
     var actual = accessPassword.value;
     var submitBtn = accessForm.querySelector('.access-submit');
+    var submitLabel = submitBtn ? submitBtn.querySelector('span') : null;
+    var submitText = submitLabel ? submitLabel.textContent : '';
+    function restoreButton() {
+      if (submitBtn) submitBtn.disabled = false;
+      if (submitLabel && submitText) submitLabel.textContent = submitText;
+    }
     if (submitBtn) submitBtn.disabled = true;
+    /* 派发密钥要几百毫秒到一两秒，先把话说清楚，别让人以为卡死了 */
+    if (submitLabel) submitLabel.textContent = '正在解开…';
     if (accessError) accessError.textContent = '';
     var check = (typeof SpaceApp !== 'undefined')
       ? SpaceApp.verifyPassword(actual)
       : Promise.resolve(false);
     check.then(function (ok) {
-      if (submitBtn) submitBtn.disabled = false;
-      if (!ok) { rejectAccess(); return; }
+      if (!ok) { restoreButton(); rejectAccess(); return; }
+      if (submitLabel) submitLabel.textContent = '正在同步…';
       var doc = (typeof SpaceApp !== 'undefined') ? SpaceApp.state.access : null;
       if (typeof Space !== 'undefined' && doc && doc.hash) Space.writeTicket(doc.hash.slice(0, 12));
       if (accessError) accessError.textContent = '';
+      restoreButton();
       unlockSpace();
     }).catch(function () {
-      if (submitBtn) submitBtn.disabled = false;
+      restoreButton();
       rejectAccess();
     });
   });
