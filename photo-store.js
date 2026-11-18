@@ -270,28 +270,41 @@
   }
 
   /* ---------------- 上传 / 删除 ---------------- */
+  /* 顺序很重要：先把照片登记进索引、把本机这张图当预览挂上（界面立刻有图），
+     再慢慢把文件加密传上去；万一传失败，就把索引里那条撤掉，别留个空壳。 */
   function upload(blob, name) {
     var S = space();
     if (!S || !S.configured) return Promise.reject(new Error('config.js 里没有配置 storage.repo'));
     if (!S.hasKey || !S.hasKey()) return Promise.reject(new Error('先输入空间密码再传照片'));
     if (!hasToken()) return Promise.reject(new Error('这台设备还没有写入密钥（设置里贴一次）'));
+
     var filename = name || makeName('.jpg');
-    return S.uploadMedia(blob, filename).then(function (info) {
-      return S.mutate('media', function (doc) {
+    var at = timeFromName(filename) || Date.now();
+    var size = blob && blob.size ? blob.size : 0;
+    try { previews[filename] = global.URL.createObjectURL(blob); } catch (e) { /* 忽略 */ }
+
+    function indexWith(sha) {
+      return S.apply('media', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         items = items.filter(function (it) { return it && it.name !== filename; });
-        items.push({ name: filename, at: timeFromName(filename) || Date.now(), size: info.size, sha: info.sha });
+        items.push({ name: filename, at: at, size: size, sha: sha || '' });
         return { items: items };
-      }).then(function () {
-        try { previews[filename] = global.URL.createObjectURL(blob); } catch (e) { /* 忽略 */ }
-        return {
-          name: filename,
-          sha: info.sha,
-          size: info.size,
-          at: timeFromName(filename) || Date.now(),
-          url: previews[filename] || ''
-        };
       });
+    }
+
+    return indexWith('').then(function () {
+      return S.uploadMedia(blob, filename).then(function (info) {
+        return indexWith(info.sha).then(function () {
+          return { name: filename, sha: info.sha, size: info.size || size, at: at, url: previews[filename] || '' };
+        });
+      });
+    }).then(null, function (err) {
+      /* 传失败：把索引里那条撤掉，界面上会回到「没这张照片」 */
+      S.apply('media', function (doc) {
+        var items = Array.isArray(doc.items) ? doc.items : [];
+        return { items: items.filter(function (it) { return it && it.name !== filename; }) };
+      }).then(null, function () { return null; });
+      throw err;
     });
   }
 
@@ -324,6 +337,14 @@
     prepare: prepare,
     url: url,
     hydrate: hydrate,
+    makeName: makeName,
+    /* 照片还在传的时候，先用本机这张图顶上，别让界面空一块 */
+    rememberPreview: function (name, objectUrl) {
+      if (!name || !objectUrl) return '';
+      previews[name] = objectUrl;
+      return objectUrl;
+    },
+    preview: function (name) { return previews[name] || urls[name] || ''; },
     publicUrl: function () { return ''; },
     cached: function () { return rows(); },
     timeFromName: timeFromName,

@@ -293,11 +293,29 @@
       };
     });
 
-    /* 只有文字、没有照片的回忆也要显示 */
+    /* 只有文字、没有照片的回忆也要显示；
+       照片还在上传（索引里还没有）的回忆也要显示，用本机那张图顶住 */
+    var known = {};
+    photos.forEach(function (p) { known[p.name] = true; });
     state.memories.forEach(function (r) {
       if (!r.photoName) {
         items.push({ key: r.id, id: r.id, name: '', sha: '', photo: '', title: r.title, text: r.text, at: r.at, by: r.by });
+        return;
       }
+      if (known[r.photoName]) return;                       /* 索引里有，上面已经放过了 */
+      var preview = ps && ps.preview ? ps.preview(r.photoName) : '';
+      if (!preview) return;                                 /* 真没有图就等它传完再说 */
+      items.push({
+        key: r.photoName,
+        name: r.photoName,
+        sha: '',
+        photo: preview,
+        pending: true,
+        title: r.title,
+        text: r.text,
+        at: r.at,
+        by: r.by
+      });
     });
 
     items.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
@@ -570,17 +588,16 @@
   }
 
   /* ---------------- 各模块的写操作 ---------------- */
+  /* 新增一条回忆：本地立刻出现，云端在后台写（S.apply 就是这个语义） */
   function addMemory(draft) {
     var item = stamp();
     item.title = draft.title;
     item.text = draft.text;
     item.photoName = draft.photoName || '';
-    return S.mutate('memories', function (doc) {
+    return S.apply('memories', function (doc) {
       var items = Array.isArray(doc.items) ? doc.items : [];
       items.push(item);
       return { items: items };
-    }).then(function () {
-      toast(draft.photoName ? '照片已经提交进仓库' : '这段回忆记下来了');
     });
   }
 

@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    情侣小站 · 全部逻辑
    想改文字 / 视频，请编辑 config.js（这个文件一般不用动）
    ============================================================ */
@@ -429,6 +429,7 @@
     updateBubuCountdown();
   }
   function openBubuPanel(panel) {
+    if (panel === 'memories' && window.Memories) { closeBubuPanel(); window.Memories.open(); return; }
     if (!bubuFeaturePanel) return;
     if (bubuContext) bubuContext.hidden = true;
     bubuFeaturePanel.hidden = false;

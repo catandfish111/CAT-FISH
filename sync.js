@@ -833,29 +833,44 @@
     return d ? clone(d.payload) : null;
   }
 
-  function set(key, payload) {
-    var next = clone(payload);
-    if (!configured || !DEK) {
-      docs[key] = {
-        payload: next,
-        rev: (docs[key] ? docs[key].rev : 0) + 1,
-        updatedAt: new Date().toISOString(),
-        sha: ''
-      };
-      markPending(key);
-      saveCache();
-      emit('change', { key: key, payload: clone(next), local: true });
-      return Promise.resolve(next);
-    }
+  /* 把结果先落到本地（内存 + 缓存）并广播，界面可以立刻重绘 */
+  function applyLocal(key, next) {
     docs[key] = {
       payload: next,
-      rev: docs[key] ? docs[key].rev : 0,
+      rev: (docs[key] ? docs[key].rev : 0) + 1,
       updatedAt: new Date().toISOString(),
       sha: docs[key] ? docs[key].sha : ''
     };
     saveCache();
     emit('change', { key: key, payload: clone(next), local: true });
-    return mutate(key, function () { return clone(next); });
+    return next;
+  }
+
+  function maybeStartPersist(key, updater, next) {
+    if (!configured || !DEK) {
+      markPending(key);
+      return;
+    }
+    /* 后台写：界面不等它。失败会自动进队列，联网后补传 */
+    mutate(key, updater).then(null, function () { return null; });
+  }
+
+  function set(key, payload) {
+    var next = clone(payload);
+    applyLocal(key, next);
+    maybeStartPersist(key, function () { return clone(next); }, next);
+    return Promise.resolve(next);
+  }
+
+  /* 乐观更新：立刻返回改好的本地结果，云端慢慢写。
+     用户点一下界面就变，不用等网络 —— 这是「点了要愣一秒」的正解。 */
+  function apply(key, updater) {
+    var base = get(key) || {};
+    var next = updater(clone(base));
+    if (next === undefined || next === null) return Promise.resolve(base);
+    applyLocal(key, next);
+    maybeStartPersist(key, updater, next);
+    return Promise.resolve(next);
   }
 
   /* 读最新 -> 改 -> 带版本校验写回；冲突就重读重试，两个人同时改不会互相盖掉 */
@@ -865,14 +880,13 @@
       var base = get(key) || {};
       var next = updater(clone(base));
       if (next === undefined || next === null) return Promise.resolve(base);
-      docs[key] = { payload: next, rev: (docs[key] ? docs[key].rev : 0) + 1, updatedAt: new Date().toISOString(), sha: '' };
+      applyLocal(key, next);
       markPending(key);
-      saveCache();
-      emit('change', { key: key, payload: clone(next), local: true });
       return Promise.resolve(next);
     }
     return chain(key, function () {
       function attempt(n) {
+        var revAtStart = docs[key] ? docs[key].rev : 0;
         return readDoc(key).then(function (remote) {
           var base = (remote && remote.payload) ? clone(remote.payload) : {};
           var next = updater(clone(base));
@@ -881,6 +895,8 @@
           var updatedAt = new Date().toISOString();
           return writeDoc(key, { rev: rev, updatedAt: updatedAt, payload: next }, remote ? remote.sha : '')
             .then(function (sha) {
+              /* 写回期间用户又点了几下：别用这次的旧结果盖掉更新的本地状态 */
+              if (docs[key] && docs[key].rev > revAtStart) return next;
               docs[key] = { payload: next, rev: rev, updatedAt: updatedAt, sha: sha };
               saveCache();
               emit('change', { key: key, payload: clone(next) });
@@ -890,20 +906,20 @@
         }).catch(function (err) {
           if (err && err.conflict && n > 1) return attempt(n - 1);
           if (err && err.locked) throw err;
-          /* 断网 / 没有密钥：先存在本机，等能写了再补发 */
-          var localBase = get(key) || {};
-          var localNext = updater(clone(localBase));
-          if (localNext === undefined || localNext === null) return localBase;
-          docs[key] = {
-            payload: localNext,
-            rev: (docs[key] ? docs[key].rev : 0) + 1,
-            updatedAt: new Date().toISOString(),
-            sha: docs[key] ? docs[key].sha : ''
-          };
-          saveCache();
-          enqueue(key, localNext);
-          emit('change', { key: key, payload: clone(localNext), local: true });
-          return localNext;
+          /* 断网 / 没有密钥：本地已经是这次改动的结果（apply 已经先改过），
+             直接把它放进待发队列就行。这里绝对不能再套一次 updater，
+             否则「打勾」会被翻回去、新增的一条会变成两条。 */
+          var current = docs[key];
+          if (!current) {
+            var base2 = get(key) || {};
+            var made = updater(clone(base2));
+            if (made === undefined || made === null) return base2;
+            applyLocal(key, made);
+            current = docs[key];
+          }
+          enqueue(key, clone(current.payload));
+          emit('change', { key: key, payload: clone(current.payload), local: true });
+          return current.payload;
         });
       }
       return attempt(left);
@@ -1170,6 +1186,7 @@
     on: on,
     get: get,
     set: set,
+    apply: apply,
     mutate: mutate,
     refresh: refresh,
     unlock: unlock,
