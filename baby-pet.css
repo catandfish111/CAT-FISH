@@ -1,0 +1,156 @@
+﻿/* ============================================================
+   小团子 · 样式
+   原创 SVG，不依赖图片；所有动画都在这里
+   ============================================================ */
+
+.baby-pet{
+  position:absolute;z-index:9;
+  left:max(4px,calc((100% - 520px)/2 - 40px));
+  bottom:calc(env(safe-area-inset-bottom) + 150px);
+  width:72px;height:86px;padding:0;border:0;background:none;
+  cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  filter:drop-shadow(0 10px 12px rgba(62,110,126,.16));
+  transform-origin:50% 88%;
+  transition:bottom .32s cubic-bezier(.2,.9,.3,1),opacity .3s ease;
+}
+.baby-pet:focus-visible{outline:3px solid rgba(239,154,178,.5);outline-offset:4px;border-radius:22px;}
+.baby-pet.has-note{bottom:calc(env(safe-area-inset-bottom) + 208px);}
+.stage:not([data-phase="space"]) .baby-pet{opacity:0;pointer-events:none;}
+
+.baby-pet svg{display:block;width:100%;height:100%;overflow:visible;}
+
+/* ---------- 配色 ---------- */
+.bp-face,.bp-ear,.bp-foot{fill:#fff3e6;stroke:#ecd0bd;stroke-width:1.2;}
+.bp-ear-in{fill:#ffc9d4;opacity:.9;}
+.bp-onesie{fill:#bfe6f7;stroke:#a9d8ee;stroke-width:1.2;}
+.bp-belly{fill:#eaf9ff;opacity:.9;}
+.bp-arm{fill:#bfe6f7;stroke:#a9d8ee;stroke-width:1.2;}
+.bp-star{fill:#ffd59a;}
+.bp-eye{fill:#3f5b66;}
+.bp-glint{fill:#fff;}
+.bp-blush{fill:#ffc2d1;opacity:.85;}
+.bp-mouth{fill:none;stroke:#b96f7e;stroke-width:2.6;stroke-linecap:round;}
+.bp-ahoge{fill:none;stroke:#e5c4ad;stroke-width:4;stroke-linecap:round;}
+.bp-drool{fill:#d8f3ff;opacity:0;}
+.bp-shadow{fill:rgba(62,110,126,.16);}
+
+/* ---------- 待机 ---------- */
+.bp-head{transform-origin:80px 96px;animation:bpBob 4.6s ease-in-out infinite;}
+.bp-body{transform-origin:80px 176px;animation:bpBreath 4.6s ease-in-out infinite;}
+.bp-ahoge{transform-origin:80px 34px;animation:bpAhoge 3.4s ease-in-out infinite;}
+.bp-drool{animation:bpDrool 11s ease-in-out infinite;}
+.bp-eyes{transform-origin:80px 80px;transition:transform .1s ease;}
+.baby-pet.is-blink .bp-eyes{transform:scaleY(.12);}
+.baby-pet.is-night .bp-eyes{transform:scaleY(.6);}
+.baby-pet.is-night .bp-head{animation-duration:6.4s;}
+.baby-pet.is-night .bp-body{animation-duration:6.4s;}
+
+@keyframes bpBob{
+  0%,100%{transform:translateY(0) rotate(-.6deg);}
+  50%{transform:translateY(-2.2px) rotate(.8deg);}
+}
+@keyframes bpBreath{
+  0%,100%{transform:scaleY(1);}
+  50%{transform:scaleY(1.02);}
+}
+@keyframes bpAhoge{
+  0%,100%{transform:rotate(-5deg);}
+  50%{transform:rotate(6deg);}
+}
+@keyframes bpDrool{
+  0%,86%,100%{opacity:0;transform:translateY(0);}
+  90%,94%{opacity:.95;transform:translateY(2px);}
+}
+
+/* ---------- 点击动作 ---------- */
+.baby-pet.is-hold{transform:scale(.97);}
+.baby-pet.is-dragging{
+  cursor:grabbing;transform:scale(1.05) rotate(var(--bp-tilt,0deg));
+  transition:none;filter:drop-shadow(0 16px 16px rgba(62,110,126,.2));
+}
+.baby-pet.is-jump{animation:bpJump .82s cubic-bezier(.2,.8,.3,1);}
+.baby-pet.is-spin{animation:bpSpin .9s cubic-bezier(.3,.7,.3,1);}
+.baby-pet.is-wiggle{animation:bpWiggle .8s ease-in-out;}
+.baby-pet.is-yawn{animation:bpYawn 1s ease-in-out;}
+.baby-pet.is-jump .bp-head,
+.baby-pet.is-spin .bp-head,
+.baby-pet.is-wiggle .bp-head,
+.baby-pet.is-yawn .bp-head{animation-play-state:paused;}
+
+@keyframes bpJump{
+  0%{transform:translateY(0) scale(1);}
+  18%{transform:translateY(2px) scale(1.04,.94);}
+  45%{transform:translateY(-30px) scale(.98,1.04);}
+  72%{transform:translateY(1px) scale(1.05,.95);}
+  86%{transform:translateY(-6px) scale(1);}
+  100%{transform:translateY(0) scale(1);}
+}
+@keyframes bpSpin{
+  0%{transform:rotate(0) scale(1);}
+  35%{transform:rotate(150deg) scale(1.06);}
+  70%{transform:rotate(300deg) scale(.98);}
+  100%{transform:rotate(360deg) scale(1);}
+}
+@keyframes bpWiggle{
+  0%,100%{transform:rotate(0);}
+  20%{transform:rotate(-8deg);}
+  45%{transform:rotate(7deg);}
+  70%{transform:rotate(-4deg);}
+}
+@keyframes bpYawn{
+  0%,100%{transform:translateY(0) scale(1);}
+  30%{transform:translateY(-4px) scale(1.05,.96);}
+  60%{transform:translateY(-2px) scale(1.02,.98);}
+}
+.baby-pet.is-yawn .bp-mouth{transform-origin:80px 95px;animation:bpMouthOpen .9s ease-in-out;}
+.baby-pet.is-yawn .bp-eyes{transform:scaleY(.16);}
+@keyframes bpMouthOpen{
+  0%,100%{transform:scaleY(1);}
+  45%{transform:scaleY(2.4);}
+}
+
+/* ---------- 对话气泡 ---------- */
+.bp-bubble{z-index:2;
+  position:absolute;left:50%;bottom:calc(100% + 8px);
+  transform:translate(-50%,6px) scale(.92);
+  min-width:52px;max-width:172px;padding:7px 11px;
+  border-radius:14px;border:1px solid rgba(255,255,255,.95);
+  background:rgba(255,255,255,.94);color:#3d6675;
+  font-size:11px;line-height:1.55;letter-spacing:.03em;text-align:center;
+  white-space:nowrap;pointer-events:none;
+  box-shadow:0 10px 22px rgba(54,102,118,.16);
+  opacity:0;transition:opacity .22s ease,transform .22s cubic-bezier(.2,.9,.3,1);
+  backdrop-filter:blur(6px);
+}
+.bp-bubble::after{
+  content:"";position:absolute;left:50%;bottom:-5px;width:10px;height:10px;
+  transform:translateX(-50%) rotate(45deg);
+  background:rgba(255,255,255,.94);
+  border-right:1px solid rgba(255,255,255,.95);
+  border-bottom:1px solid rgba(255,255,255,.95);
+}
+.bp-bubble.is-on{opacity:1;transform:translate(-50%,0) scale(1);}
+
+/* ---------- 爱心 / 星星 ---------- */
+.bp-hearts{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+.bp-bit{
+  position:absolute;bottom:62%;font-style:normal;font-size:14px;
+  opacity:0;animation:bpFloat 1.2s ease-out forwards;
+}
+.bp-bit.is-heart{color:#ef9ab2;text-shadow:0 2px 6px rgba(239,154,178,.35);}
+.bp-bit.is-spark{color:#ffcf7d;font-size:11px;}
+@keyframes bpFloat{
+  0%{opacity:0;transform:translateY(0) scale(.7);}
+  25%{opacity:1;}
+  100%{opacity:0;transform:translateY(-34px) scale(1.05) rotate(8deg);}
+}
+
+@media (max-width:380px){
+  .baby-pet{width:82px;height:100px;}
+  .bp-bubble{z-index:2;font-size:10.5px;max-width:150px;}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .baby-pet,.baby-pet *{animation:none!important;transition:none!important;}
+}

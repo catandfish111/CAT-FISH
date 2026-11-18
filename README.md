@@ -28,6 +28,8 @@ happy/
 ├── space-app.js          业务面板：便签 / 愿望 / 提醒 / 番茄钟 / 设置（回忆已独立成页）
 ├── memories.js           「我们的回忆」独立页：时间轴 / 相册 / 详情 / 编辑
 ├── memories.css          回忆页样式
+├── baby-pet.js           首页「小团子」：拖动 / 点击动作 / 随机说话
+├── baby-pet.css          小团子的样式与动画
 ├── app.js                逻辑：信封动画、打字机、视频、布布控制台、形象与特效
 ├── assets/
 │   ├── video1.mp4        ★ 信里那段视频（1080×1442 竖屏，29MB）
@@ -128,6 +130,8 @@ ffmpeg -i 原视频.mov -c:v libx264 -preset slower -crf 20 -pix_fmt yuv420p ^
 
 首页「我们的回忆」和底部导航「回忆」会进入**独立的回忆页**（memories.js），不再挤在布布浮层里。
 
+首页左边还有一只**小团子**（电子养娃）：可以拖到任何地方，点一下会蹦 / 转圈 / 打哈欠并说一句话；安静时每 2~4 分钟才会自己嘟囔一句，不会一直吵。位置记在这台设备上。改台词：`baby-pet.js` 里的 `LINES`。
+
 首页右下角那只布布：可以**拖动**（带惯性）、**点一下**换动作、**长按**打开功能栏
 （总览 / 动作 / 便签 / 番茄钟 / 提醒 / 设置）。
 
@@ -205,6 +209,7 @@ ffmpeg -i 原视频.mov -c:v libx264 -preset slower -crf 20 -pix_fmt yuv420p ^
 node tests/github-test.js   # 数据层：建空间、共享、密码错误、并发合并、离线补传、换密码、照片
 node tests/browser-test.js  # 真浏览器：两台「设备」用同一密码看到彼此的便签和照片
 node tests/memories-test.js # 真浏览器：回忆独立页的入口、编辑、删除撤销、照片上传
+node tests/pet-test.js      # 真浏览器：小团子出现、点击动作、拖动记忆位置
 ```
 
 > `tests/` 在 `.gitignore` 里，不会被传到线上。
