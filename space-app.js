@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    情侣空间的「云同步业务层」
    ------------------------------------------------------------
    sync.js 负责搬运 JSON，这个文件负责定义存什么、怎么显示。
@@ -45,6 +45,29 @@
     el.classList.add('is-visible');
     clearTimeout(toast._t);
     toast._t = setTimeout(function () { el.classList.remove('is-visible'); }, 2600);
+  }
+
+  /* ---------------- 乐观更新 ----------------
+     所有交互先改本机，界面立刻响应；云端在后台写。
+     写失败才提示，成功什么都不做。 */
+  var syncFailAt = 0;
+  function watchSync(p) {
+    if (p && p.synced) {
+      p.synced.then(function (res) {
+        if (!res || res.ok !== false) return;
+        var now = Date.now();
+        if (now - syncFailAt < 2500) return;
+        syncFailAt = now;
+        var reason = (res.error && (res.error.message || res.error)) || '网络不通';
+        if (/Failed to fetch|NetworkError|Load failed|net::/i.test(String(reason))) reason = '网络不通';
+        toast('没同步上：' + reason + ' · 已存本机，联网后补传');
+      });
+    }
+    return p;
+  }
+  function optimistic(key, updater) {
+    if (typeof S.apply === 'function') return watchSync(S.apply(key, updater));
+    return S.mutate(key, updater);
   }
 
   /* ---------------- 身份（谁写的） ---------------- */
@@ -680,7 +703,7 @@
       var wish = stamp();
       wish.text = text;
       wish.done = false;
-      S.mutate('wishes', function (doc) {
+      optimistic('wishes', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         items.push(wish);
         return { items: items };
@@ -690,7 +713,7 @@
     var wishToggle = hit('[data-wish-toggle]');
     if (wishToggle) {
       var wid = wishToggle.getAttribute('data-wish-toggle');
-      S.mutate('wishes', function (doc) {
+      optimistic('wishes', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         items.forEach(function (it) {
           if (it.id !== wid) return;
@@ -705,7 +728,7 @@
     var wishDel = hit('[data-wish-del]');
     if (wishDel) {
       var wid2 = wishDel.getAttribute('data-wish-del');
-      S.mutate('wishes', function (doc) {
+      optimistic('wishes', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         return { items: items.filter(function (it) { return it.id !== wid2; }) };
       }).then(function () { renderPanel('wishes', currentBody); });
@@ -720,7 +743,7 @@
       var note = stamp();
       note.text = noteText;
       note.pin = true;
-      S.mutate('notes', function (doc) {
+      optimistic('notes', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         items.forEach(function (it) { it.pin = false; });
         items.push(note);
@@ -735,7 +758,7 @@
     var pinBtn = hit('[data-note-pin]');
     if (pinBtn) {
       var nid = pinBtn.getAttribute('data-note-pin');
-      S.mutate('notes', function (doc) {
+      optimistic('notes', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         var turnOn = true;
         items.forEach(function (it) {
@@ -748,7 +771,7 @@
     var noteDel = hit('[data-note-del]');
     if (noteDel) {
       var nid2 = noteDel.getAttribute('data-note-del');
-      S.mutate('notes', function (doc) {
+      optimistic('notes', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         return { items: items.filter(function (it) { return it.id !== nid2; }) };
       }).then(function () { renderPanel('notes', currentBody); });
@@ -763,7 +786,7 @@
       rem.text = rt.value.trim();
       rem.at = new Date(rtTime.value).getTime();
       rem.done = false;
-      S.mutate('reminders', function (doc) {
+      optimistic('reminders', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         items.push(rem);
         return { items: items };
@@ -773,7 +796,7 @@
     var remDel = hit('[data-reminder-del]');
     if (remDel) {
       var rid = remDel.getAttribute('data-reminder-del');
-      S.mutate('reminders', function (doc) {
+      optimistic('reminders', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         return { items: items.filter(function (it) { return it.id !== rid; }) };
       }).then(function () { renderPanel('reminders', currentBody); });
@@ -784,18 +807,18 @@
     if (hit('[data-timer-toggle]')) {
       if (state.timer.running) {
         var left = timerRemaining();
-        S.set('timer', { running: false, mode: state.timer.mode, endsAt: 0, duration: left || state.timer.duration, by: identity() })
+        watchSync(S.set('timer', { running: false, mode: state.timer.mode, endsAt: 0, duration: left || state.timer.duration, by: identity() }))
           .then(function () { renderPanel('timer', currentBody); });
       } else {
         var minutesEl = $('timerMinutes');
         var minutes = minutesEl ? Math.min(120, Math.max(1, Number(minutesEl.value) || 25)) : 25;
-        S.set('timer', { running: true, mode: 'focus', endsAt: Date.now() + minutes * 60000, duration: minutes * 60, by: identity() })
+        watchSync(S.set('timer', { running: true, mode: 'focus', endsAt: Date.now() + minutes * 60000, duration: minutes * 60, by: identity() }))
           .then(function () { toast('专注开始，另一边也会看到'); renderPanel('timer', currentBody); });
       }
       return true;
     }
     if (hit('[data-timer-reset]')) {
-      S.set('timer', { running: false, mode: 'focus', endsAt: 0, duration: 1500, by: identity() })
+      watchSync(S.set('timer', { running: false, mode: 'focus', endsAt: 0, duration: 1500, by: identity() }))
         .then(function () { renderPanel('timer', currentBody); });
       return true;
     }
@@ -811,7 +834,7 @@
       var sd = $('startDate');
       var value = sd ? sd.value : '';
       if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) { toast('先选一个日期'); return true; }
-      S.mutate('profile', function (doc) {
+      optimistic('profile', function (doc) {
         doc.startDate = value;
         return doc;
       }).then(function () {
@@ -876,7 +899,7 @@
         /* 云端：用新密码重新包裹数据密钥（文件本身不用重传） */
         var rewrap = (S.configured && S.changePassword) ? S.changePassword(newPwd) : Promise.resolve(true);
         return rewrap.then(function () {
-          return S.set('access', doc);
+          return S.mutate('access', function () { return doc; });
         }).then(function () {
           toast('密码改好了，另一台设备也要用新密码进来');
           renderPanel('settings', currentBody);
@@ -1057,7 +1080,7 @@
     if (!due.length) return;
     var ids = due.map(function (it) { return it.id; });
     toast('提醒时间到：' + due[0].text);
-    S.mutate('reminders', function (doc) {
+    optimistic('reminders', function (doc) {
       var items = Array.isArray(doc.items) ? doc.items : [];
       items.forEach(function (it) {
         if (ids.indexOf(it.id) >= 0) { it.done = true; it.doneAt = now; }

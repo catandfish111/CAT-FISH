@@ -296,6 +296,7 @@
         if (res.ok) {
           online = true;
           lastError = '';
+          apiBrokenAt = 0;
           return data;
         }
         var err = new Error((data && data.message) || ('GitHub ' + res.status));
@@ -492,10 +493,25 @@
   /* 写一个文件；shaHint 是本地记住的版本号，对不上会抛 conflict */
   function putFile(path, base64, message, shaHint) {
     if (!hasToken()) return Promise.reject(new Error('这台设备没有写入密钥'));
-    return ensureBranch().then(function () {
+
+    function send(sha) {
       var body = { message: message, content: base64, branch: CFG.branch };
-      if (shaHint) body.sha = shaHint;
+      if (sha) body.sha = sha;
       return gh('PUT', apiUrl(path), body);
+    }
+
+    return ensureBranch().then(function () {
+      return send(shaHint);
+    }).catch(function (err) {
+      /* 409/422 常见于：本地 sha 过期，或者刚才走 raw 读到内容但没有 sha。
+         重新问一次当前文件的 sha，再写一次。 */
+      if (err && (err.status === 409 || err.status === 422)) {
+        return getMeta(path).then(function (meta) {
+          if (!meta || !meta.sha) throw err;
+          return send(meta.sha);
+        });
+      }
+      throw err;
     }).then(function (res) {
       dropTree();                                    /* 本地刚写过，清单作废 */
       return (res && res.content && res.content.sha) || '';
@@ -846,20 +862,30 @@
     return next;
   }
 
-  function maybeStartPersist(key, updater, next) {
-    if (!configured || !DEK) {
+  function maybeStartPersist(key, updater, next, strict) {
+    if (!configured) {
       markPending(key);
-      return;
+      return Promise.resolve({ ok: true, local: true });
     }
-    /* 后台写：界面不等它。失败会自动进队列，联网后补传 */
-    mutate(key, updater).then(null, function () { return null; });
+    if (!DEK) {
+      markPending(key);
+      return Promise.resolve({ ok: false, error: new Error('还没有解锁空间') });
+    }
+    /* 后台写：界面不等它。失败进队列，并把失败结果交回给调用方去提示 */
+    return mutate(key, updater, 3, strict).then(function () {
+      return { ok: true };
+    }, function (err) {
+      return { ok: false, error: err };
+    });
   }
 
   function set(key, payload) {
     var next = clone(payload);
     applyLocal(key, next);
-    maybeStartPersist(key, function () { return clone(next); }, next);
-    return Promise.resolve(next);
+    var synced = maybeStartPersist(key, function () { return clone(next); }, next, true);
+    var result = Promise.resolve(next);
+    result.synced = synced;
+    return result;
   }
 
   /* 乐观更新：立刻返回改好的本地结果，云端慢慢写。
@@ -867,14 +893,20 @@
   function apply(key, updater) {
     var base = get(key) || {};
     var next = updater(clone(base));
-    if (next === undefined || next === null) return Promise.resolve(base);
+    if (next === undefined || next === null) {
+      var unchanged = Promise.resolve(base);
+      unchanged.synced = Promise.resolve({ ok: true });
+      return unchanged;
+    }
     applyLocal(key, next);
-    maybeStartPersist(key, updater, next);
-    return Promise.resolve(next);
+    var synced = maybeStartPersist(key, updater, next, true);
+    var result = Promise.resolve(next);
+    result.synced = synced;
+    return result;
   }
 
   /* 读最新 -> 改 -> 带版本校验写回；冲突就重读重试，两个人同时改不会互相盖掉 */
-  function mutate(key, updater, attempts) {
+  function mutate(key, updater, attempts, strict) {
     var left = typeof attempts === 'number' ? attempts : 3;
     if (!configured || !DEK) {
       var base = get(key) || {};
@@ -919,6 +951,7 @@
           }
           enqueue(key, clone(current.payload));
           emit('change', { key: key, payload: clone(current.payload), local: true });
+          if (strict) throw err;
           return current.payload;
         });
       }
