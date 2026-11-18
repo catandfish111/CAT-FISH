@@ -118,6 +118,10 @@
     setTimeout(function () { if (!state.greeted) greet(); }, 12000);
     setTimeout(function () {
       if (state.pos) return;
+      try {
+        if (global.sessionStorage.getItem('catfish-baby-hinted-v1')) return;
+        global.sessionStorage.setItem('catfish-baby-hinted-v1', '1');
+      } catch (e) { /* 忽略 */ }
       say('可以把我拖走哦', 3400);
     }, 4500);
     setTimeout(function () { restatePos(); }, 300);
