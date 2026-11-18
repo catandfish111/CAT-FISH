@@ -28,6 +28,7 @@
   var spaceHome = null;
 
   var state = {
+    attention: 0.65,
     pos: null,
     drag: null,
     moved: false,
@@ -240,16 +241,27 @@
 
   function tap() {
     var now = Date.now();
-    if (now - state.lastActionAt < 700) return;
+    if (now - state.lastActionAt < 900) return;
     state.lastActionAt = now;
-    state.lastInteractAt = now;
+    /* 注意力：被逗一次就少一点，逗得越勤越安静 */
+    state.attention = Math.max(0, state.attention - 0.45);
 
-    var action = ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
-    play(action);
-    if (Math.random() < 0.7) say(pick(LINES.tap), 1900);
-    if (Math.random() < 0.4) burst('heart', 3);
-    else burst('spark', 2);
-    if (isNight()) root.classList.add('is-night');
+    /* 呆的关键不是动作，是慢半拍：先愣一下再动 */
+    var delay = 110 + Math.random() * 130;
+    setTimeout(function () {
+      if (state.drag) return;
+      state.lastInteractAt = Date.now();
+      var action = ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
+      play(action);
+      /* 一次只给一到两种反馈，不同时把动作、台词、粒子全放出来 */
+      var spoke = false;
+      if (Math.random() < 0.45) { say(pick(LINES.tap), 1900); spoke = true; }
+      if (!spoke) {
+        if (Math.random() < 0.5) burst('heart', 2);
+        else burst('spark', 1);
+      }
+      if (isNight()) root.classList.add('is-night');
+    }, delay);
   }
 
   function play(action) {
@@ -308,16 +320,17 @@
   }
 
   function startTalking() {
-    state.nextTalkAt = Date.now() + rand(100000, 180000);
+    state.nextTalkAt = Date.now() + 90000;
     state.talkTimer = setInterval(function () {
+      /* 安静的时候注意力慢慢回满；回满了才可能自言自语 */
+      state.attention = Math.min(1, state.attention + 0.06);
+      if (state.attention < 0.9) return;
       if (Date.now() < state.nextTalkAt) return;
-      if (!canSpeak()) {
-        state.nextTalkAt = Date.now() + 20000;
-        return;
-      }
+      if (!canSpeak()) { state.nextTalkAt = Date.now() + 15000; return; }
       say(randomLine(), 3600);
       burst('heart', 1);
-      state.nextTalkAt = Date.now() + rand(120000, 260000);
+      state.attention = Math.max(0, state.attention - 0.6);
+      state.nextTalkAt = Date.now() + 45000;
     }, 10000);
   }
 

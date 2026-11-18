@@ -9,6 +9,7 @@
 | --- | --- |
 | [01-bubu-room-decomposition.md](01-bubu-room-decomposition.md) | 布布房间的四层职责、7 个模块的归属、路由与迁移顺序 |
 | [02-memories-module.md](02-memories-module.md) | 回忆模块的页面、数据模型、照片管线、冲突合并、代码落点 |
+| [03-baby-pet.md](03-baby-pet.md) | 电子养娃角色「小团子」：角色分工、呆萌的操作化、注意力预算、状态机 |
 | [memories-prototype.html](memories-prototype.html) | 可点击原型（单文件、零依赖） |
 | [shots/](shots) | 原型截图（390px 手机宽 + 桌面预览） |
 
