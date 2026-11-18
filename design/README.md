@@ -1,7 +1,7 @@
-# 设计稿 · 未接入线上
+﻿# 设计稿 · 回忆页已落地
 
-这一份是「布布房间拆解 + 回忆模块独立设计」的交付物，**只是设计，没有改动站点代码**。
-线上的 `index.html / app.js / space-app.js / sync.js` 都还是原样，`data` 分支的数据结构也不变。
+这一份是「布布房间拆解 + 回忆模块独立设计」的交付物。**回忆模块已按第一版落地**：线上点「我们的回忆」会打开独立页（`memories.js` / `memories.css`），布布面板不再有回忆 tab；其余拆解还没做。
+`data` 分支的数据结构没有变，文字和照片仍然是密文。
 
 ## 内容
 
@@ -32,7 +32,7 @@
 | --- | --- |
 | ![编辑](shots/m-editor-390.png) | ![相册](shots/m-album-390.png) |
 
-## 下一步
+## 已落地 / 下一步
 
-按 `02-memories-module.md` 第 11 节落地：新增 `router.js` / `memories.js` / `memories.css`，复用现有 `Space`、`PhotoStore`，不改 `sync.js`。
+回忆页已经上线（`memories.js` + `memories.css`）。剩下的按 `01-bubu-room-decomposition.md` 继续：设置独立页、其他模块路由化、把布布浮层收成快捷菜单。
 上线前记得把新文件加进 `tools/deploy.js` 的 `FILES` 白名单。

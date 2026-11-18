@@ -29,6 +29,7 @@
     editingId: '',
     pendingPhoto: null,
     editPhotoName: '',
+    originalPhotoName: '',
     saving: false,
     undo: null,
     toastTimer: 0,
@@ -467,6 +468,7 @@
     state.editingId = memory ? memory.id : '';
     state.pendingPhoto = null;
     state.editPhotoName = memory ? memory.photoName : '';
+    state.originalPhotoName = memory ? memory.photoName : '';
     els.edHeading.textContent = memory ? '编辑回忆' : '新回忆';
     els.title.value = memory ? memory.title : '';
     els.text.value = memory ? memory.text : '';
@@ -488,6 +490,7 @@
     state.editingId = '';
     state.pendingPhoto = null;
     state.editPhotoName = '';
+    state.originalPhotoName = '';
     els.editor.classList.remove('is-open');
     els.editor.hidden = true;
     els.file.value = '';
@@ -555,7 +558,7 @@
         }
         return { items: arr };
       }).then(function () {
-        var oldPhoto = state.editPhotoName;
+        var oldPhoto = state.originalPhotoName;
         if (oldPhoto && photoName && oldPhoto !== photoName && PS && PS.hasToken && PS.hasToken()) {
           PS.remove(oldPhoto).then(null, function () { return null; });
         }
