@@ -524,15 +524,38 @@
     var base = state.editingId ? findItem(state.editingId) : null;
     var at = combineDate(els.date.value, base ? base.at : 0);
 
-    var photoPromise = Promise.resolve(state.editPhotoName || '');
+    var photoPromise;
     if (state.pendingPhoto) {
       if (!PS || !PS.enabled) { state.saving = false; updateSaveState(); toast('config.js 里还没配 storage.repo，照片没地方放'); return; }
       if (!PS.hasToken()) { state.saving = false; updateSaveState(); toast('这台设备还没有写入密钥，去「设置 → 写入密钥」贴一次'); return; }
       toast('照片上传中…');
-      photoPromise = PS.upload(state.pendingPhoto.blob).then(function (entry) { return entry.name; });
+      photoPromise = PS.upload(state.pendingPhoto.blob).then(function (entry) {
+        return { name: entry.name };
+      }, function (err) {
+        return { error: err };
+      });
+    } else {
+      photoPromise = Promise.resolve({ name: state.editPhotoName || '' });
     }
 
-    photoPromise.then(function (photoName) {
+    var photoFailed = false;
+    photoPromise.then(function (res) {
+      if (res.error) {
+        var msg = (res.error && res.error.message) || '网络不通';
+        /* 只放照片、没有文字：留在编辑页，让用户重试或补一句文字 */
+        if (!title && !text) {
+          state.saving = false;
+          updateSaveState();
+          toast('照片没传上去：' + msg);
+          return null;
+        }
+        /* 有文字就先保存文字，照片失败不拖累这条回忆 */
+        photoFailed = true;
+        toast('照片没传上去（' + msg + '），先保存文字');
+        res = { name: '' };
+      }
+
+      var photoName = res.name || '';
       var item = {
         id: state.editingId || uid(),
         at: at,
@@ -559,16 +582,19 @@
         return { items: arr };
       }).then(function () {
         var oldPhoto = state.originalPhotoName;
-        if (oldPhoto && photoName && oldPhoto !== photoName && PS && PS.hasToken && PS.hasToken()) {
-          PS.remove(oldPhoto).then(null, function () { return null; });
-        }
         state.saving = false;
-        clearDraft();
-        closeEditor();
-        render();
-        syncHome();
-        toast(editing ? '改好了' : '记进回忆里了');
-        els.scroll.scrollTo({ top: 0, behavior: 'smooth' });
+        try {
+          if (oldPhoto && photoName && oldPhoto !== photoName && PS && PS.hasToken && PS.hasToken()) {
+            PS.remove(oldPhoto).then(null, function () { return null; });
+          }
+          clearDraft();
+          closeEditor();
+          render();
+          syncHome();
+          /* scrollTo(options) 在旧版 iOS / X5 上会抛错，用 scrollTop 最稳 */
+          els.scroll.scrollTop = 0;
+        } catch (e) { /* 重绘出问题也不影响已经保存的结果 */ }
+        toast(photoFailed ? '文字已保存，照片没传上去' : (editing ? '改好了' : (photoName ? '记进回忆里了' : '文字已保存')));
       });
     }).then(null, function (err) {
       state.saving = false;
@@ -576,7 +602,6 @@
       toast('保存失败：' + ((err && err.message) || '网络不通'));
     });
   }
-
   /* ---------------- 删除 ---------------- */
   function askDelete() {
     if (!state.detailId) return;

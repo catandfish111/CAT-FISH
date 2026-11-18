@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    照片仓库：照片加密后直接提交进 GitHub 仓库
    ------------------------------------------------------------
    照片压缩到长边 1400 像素（约 150KB）→ 用空间密钥加密 → 提交到
@@ -270,8 +270,8 @@
   }
 
   /* ---------------- 上传 / 删除 ---------------- */
-  /* 顺序很重要：先把照片登记进索引、把本机这张图当预览挂上（界面立刻有图），
-     再慢慢把文件加密传上去；万一传失败，就把索引里那条撤掉，别留个空壳。 */
+  /* 先把本机这张图挂成预览（界面立刻有图），再加密上传文件，最后登记索引。
+     顺序不能反：索引和文件同时写会抢同一个分支，GitHub 会回 409。 */
   function upload(blob, name) {
     var S = space();
     if (!S || !S.configured) return Promise.reject(new Error('config.js 里没有配置 storage.repo'));
@@ -281,10 +281,13 @@
     var filename = name || makeName('.jpg');
     var at = timeFromName(filename) || Date.now();
     var size = blob && blob.size ? blob.size : 0;
+    /* 本机预览先挂上，编辑器/列表可以立刻看到这张图 */
     try { previews[filename] = global.URL.createObjectURL(blob); } catch (e) { /* 忽略 */ }
 
     function indexWith(sha) {
-      return S.apply('media', function (doc) {
+      /* 用 mutate 而不是 apply：等索引真的写进仓库再返回。
+         apply 是后台写，会和紧接着的文件上传抢同一个分支，GitHub 会回 409。 */
+      return S.mutate('media', function (doc) {
         var items = Array.isArray(doc.items) ? doc.items : [];
         items = items.filter(function (it) { return it && it.name !== filename; });
         items.push({ name: filename, at: at, size: size, sha: sha || '' });
@@ -292,22 +295,16 @@
       });
     }
 
-    return indexWith('').then(function () {
-      return S.uploadMedia(blob, filename).then(function (info) {
-        return indexWith(info.sha).then(function () {
-          return { name: filename, sha: info.sha, size: info.size || size, at: at, url: previews[filename] || '' };
-        });
+    /* 顺序：先传文件，再登记索引。上传失败就撤掉本机预览，不留下空壳。 */
+    return S.uploadMedia(blob, filename).then(function (info) {
+      return indexWith(info.sha).then(function () {
+        return { name: filename, sha: info.sha, size: info.size || size, at: at, url: previews[filename] || '' };
       });
     }).then(null, function (err) {
-      /* 传失败：把索引里那条撤掉，界面上会回到「没这张照片」 */
-      S.apply('media', function (doc) {
-        var items = Array.isArray(doc.items) ? doc.items : [];
-        return { items: items.filter(function (it) { return it && it.name !== filename; }) };
-      }).then(null, function () { return null; });
+      revoke(filename);
       throw err;
     });
   }
-
   function remove(name) {
     var S = space();
     if (!S || !S.hasToken || !S.hasToken()) return Promise.reject(new Error('没有写入密钥，删不了仓库里的照片'));
