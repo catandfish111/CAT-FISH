@@ -31,8 +31,8 @@ happy/
 ├── app.js                逻辑：信封动画、打字机、视频、布布控制台、形象与特效
 ├── assets/
 │   ├── video1.mp4        ★ 信里那段视频（1080×1442 竖屏，29MB）
-│   ├── bg-mobile.jpg     手机背景壁纸（872×1548 竖屏）
-│   ├── bg-desktop.jpg    电脑背景壁纸（2412×1548 横屏）
+│   ├── bg-mobile-v2.jpg  手机背景壁纸（872×1548 竖屏，76KB）
+│   ├── bg-desktop-v2.jpg 电脑背景壁纸（1920×1232 横屏，85KB）
 │   ├── bubu/             布布的 34 个动作 GIF（本地，4MB）
 │   └── README.txt        视频规格与压制命令
 └── tests/                自检脚本（不影响站点，可删）
@@ -114,12 +114,12 @@ ffmpeg -i 原视频.mov -c:v libx264 -preset slower -crf 20 -pix_fmt yuv420p ^
 
 ## 4. 背景壁纸
 
-`assets/bg-mobile.jpg`（手机）和 `assets/bg-desktop.jpg`（电脑）由 `styles.css` 里的媒体查询自动切换，
+`assets/bg-mobile-v2.jpg`（手机）和 `assets/bg-desktop-v2.jpg`（电脑）由 `styles.css` 里的媒体查询自动切换，
 **两边只下载自己那一张**。断点在 769px：
 
 ```css
-.space-bg-img{background:#8bd9f7 url("assets/bg-mobile.jpg") center/cover no-repeat;}
-@media (min-width:769px){ .space-bg-img{background-image:url("assets/bg-desktop.jpg");} }
+.space-bg-img{background-color:#8bd9f7;background-image:var(--wallpaper-mobile),var(--wallpaper-mobile-lqip);background-size:cover;}
+@media (min-width:769px){ .space-bg-img{background-image:var(--wallpaper-desktop),var(--wallpaper-desktop-lqip);} }
 ```
 
 换图：把新图命名成同名文件替换，或改上面的路径。想调裁切位置就把 `center` 改成 `top`、`center 30%` 之类。

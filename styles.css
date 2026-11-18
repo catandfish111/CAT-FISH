@@ -1,8 +1,14 @@
-/* ============================================================
+﻿/* ============================================================
    情侣小站 · 样式
    想换配色，只改下面这一段变量就够了
    ============================================================ */
 :root{
+  /* 壁纸：新文件名绕开旧缓存；lqip 是内联的 32px 缩略图，先铺一层再换大图 */
+  --wallpaper-mobile:url("assets/bg-mobile-v2.jpg");
+  --wallpaper-desktop:url("assets/bg-desktop-v2.jpg");
+  --wallpaper-mobile-lqip:url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABgQEhUSDxgVExUaGRgcIzsmIyAgI0gzNis7VUtaWFRLUlFeaodzXmSAZVFSdqB3gIyQl5mXW3GmsqWTsIeUl5L/2wBDARkaGiMfI0UmJkWSYVJhkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpL/wAARCAA5ACADASIAAhEBAxEB/8QAGQAAAwEBAQAAAAAAAAAAAAAAAAECAwQG/8QAIBAAAgICAgIDAAAAAAAAAAAAAAECESExAyIEEhNBYf/EABYBAQEBAAAAAAAAAAAAAAAAAAABAv/EABcRAQEBAQAAAAAAAAAAAAAAAAARATH/2gAMAwEAAhEDEQA/APSt1oVNhFW8mn0Z3WrGdMpVRVEtUyWlEFaBvaIhLARlbqgK+RRdSY5SWjk8nhnPkjJSwjohHqrAIxqOBONPA8rA3F7KD0xscXimSr1YaIGotmrXWhQKNJrJL8JapmxnybEXOv/Z");
+  --wallpaper-desktop-lqip:url("data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABgQEhUSDxgVExUaGRgcIzsmIyAgI0gzNis7VUtaWFRLUlFeaodzXmSAZVFSdqB3gIyQl5mXW3GmsqWTsIeUl5L/2wBDARkaGiMfI0UmJkWSYVJhkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpKSkpL/wAARCAAVACADASIAAhEBAxEB/8QAGAAAAwEBAAAAAAAAAAAAAAAAAAECAwb/xAAbEAADAQEAAwAAAAAAAAAAAAAAARECITFBYf/EABYBAQEBAAAAAAAAAAAAAAAAAAABAv/EABYRAQEBAAAAAAAAAAAAAAAAAABBAf/aAAwDAQACEQMRAD8A6RDXRv4T0y2pz0Kk4UbrNKkMQa4icq+QApC0oVlcoACP/9k=");
+
   --bg-0:#1b0b11;
   --bg-1:#2a1219;
   --bg-2:#43161f;
@@ -43,7 +49,11 @@ svg{display:block;}
 .access-gate{
   position:fixed;inset:0;z-index:100;display:grid;place-items:center;
   padding:24px;
-  background:#dff6ff url("assets/bg-mobile.jpg") center/cover no-repeat;
+  background-color:#dff6ff;
+  background-image:var(--wallpaper-mobile),var(--wallpaper-mobile-lqip);
+  background-position:center,center;
+  background-size:cover,cover;
+  background-repeat:no-repeat,no-repeat;
   color:#315f70;
   transition:opacity .48s ease,visibility .48s ease;
 }
@@ -77,7 +87,7 @@ svg{display:block;}
 @keyframes accessShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 body:not(.access-unlocked) #app{visibility:hidden;pointer-events:none;}
 body.access-unlocked #app{visibility:visible;}
-@media (min-width:769px){.access-gate{background-image:url("assets/bg-desktop.jpg");}}
+@media (min-width:769px){.access-gate{background-image:var(--wallpaper-desktop),var(--wallpaper-desktop-lqip);}}
 @media (max-width:380px){.access-gate{padding:18px;}.access-gate-card{padding:28px 21px 23px;}.access-gate-card h1{font-size:22px;}}
 
 /* 舞台上所有可点元素，光标都是小爱心 */
@@ -108,11 +118,15 @@ body.access-unlocked #app{visibility:visible;}
 .stage[data-phase="space"]{background:#8bd9f7;}
 .space-bg-img{
   position:absolute;inset:0;z-index:0;pointer-events:none;
-  background:#8bd9f7 url("assets/bg-mobile.jpg") center/cover no-repeat;
+  background-color:#8bd9f7;
+  background-image:var(--wallpaper-mobile),var(--wallpaper-mobile-lqip);
+  background-position:center,center;
+  background-size:cover,cover;
+  background-repeat:no-repeat,no-repeat;
   opacity:1;
 }
 @media (min-width:769px){
-  .space-bg-img{background-image:url("assets/bg-desktop.jpg");}
+  .space-bg-img{background-image:var(--wallpaper-desktop),var(--wallpaper-desktop-lqip);}
 }
 /* 上面压一层柔光，保证文字和卡片看得清 */
 .space-bg-scrim{
