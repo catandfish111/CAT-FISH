@@ -1,16 +1,19 @@
 ﻿/* ============================================================
    小团子 · 首页电子养娃宠物
    ------------------------------------------------------------
-   · 原创 SVG 形象，不依赖任何图片
-   · 可拖动（带倾斜和落地回弹），位置记在本机
-   · 点一下有动作和台词；隔一段时间自己说一句，但不会太频繁
+   · 原创 SVG，头 / 耳朵 / 眼睛 / 瞳孔 / 手臂 / 腿 / 身体 / 呆毛
+     都是独立分组，各自有 transform-origin，可以单独动
+   · 待机时会有小动作：眨眼、东张西望、抖耳朵、点脚、摆手臂
+   · 点一下会触发成套动作：挥手 / 跳舞 / 跳 / 转圈 / 打哈欠 /
+     害羞 / 捂眼睛 / 踢腿 / 打嗝，每个动作都是各部位配合
+   · 可拖动，位置记在本机；随机说话，但频率很低
    ============================================================ */
 (function (global) {
   'use strict';
 
   var POS_KEY = 'catfish-baby-pos-v1';
+  var HINT_KEY = 'catfish-baby-hinted-v1';
   var GREET_KEY = 'catfish-baby-greeted-v1';
-  var NAME = '小团子';
 
   var LINES = {
     tap: ['嘿嘿～', '抱抱！', '宝宝在这里', '咿呀！', '摸摸头', '宝宝开心', '再点一下嘛', '咕噜咕噜'],
@@ -20,7 +23,8 @@
     drag: ['晕晕…', '放我下来～', '飞起来啦', '慢慢放嘛']
   };
 
-  var ACTIONS = ['is-jump', 'is-spin', 'is-wiggle', 'is-yawn'];
+  var ACTIONS = ['is-wave', 'is-dance', 'is-jump', 'is-spin', 'is-yawn', 'is-shy', 'is-nod', 'is-kick', 'is-hiccup'];
+  var MICRO = ['ear', 'look', 'tilt', 'foot', 'arm', 'yawn', 'hiccup'];
 
   var root = null;
   var bubble = null;
@@ -28,18 +32,21 @@
   var spaceHome = null;
 
   var state = {
-    attention: 0.65,
     pos: null,
     drag: null,
     moved: false,
     suppressClickUntil: 0,
     lastActionAt: 0,
+    lastAction: '',
+    actionUntil: 0,
     lastInteractAt: Date.now(),
     lastLine: '',
     nextTalkAt: Date.now() + 120000,
     bubbleTimer: 0,
     blinkTimer: 0,
     talkTimer: 0,
+    idleTimer: 0,
+    lookFrame: 0,
     greeted: false,
     inited: false
   };
@@ -54,36 +61,73 @@
   }
   function nowHour() { return new Date().getHours(); }
   function isNight() { var h = nowHour(); return h >= 22 || h < 6; }
+  function phaseIsSpace() {
+    var app = document.getElementById('app');
+    return !app || app.dataset.phase === 'space';
+  }
 
+  /* ---------------- 分部件 SVG ----------------
+     每个 g 都有自己的 transform-origin，CSS 里单独驱动 */
   var SVG = [
     '<svg viewBox="0 0 160 200" role="img" aria-hidden="true">',
-    '  <ellipse class="bp-shadow" cx="80" cy="186" rx="40" ry="7"/>',
+    '  <ellipse class="bp-shadow" cx="80" cy="188" rx="38" ry="6"/>',
+
+    '  <g class="bp-leg left">',
+    '    <rect class="bp-limb" x="59.5" y="154" width="9" height="20" rx="4.5"/>',
+    '    <ellipse class="bp-foot" cx="62" cy="177" rx="12" ry="8"/>',
+    '  </g>',
+    '  <g class="bp-leg right">',
+    '    <rect class="bp-limb" x="91.5" y="154" width="9" height="20" rx="4.5"/>',
+    '    <ellipse class="bp-foot" cx="98" cy="177" rx="12" ry="8"/>',
+    '  </g>',
+
     '  <g class="bp-body">',
-    '    <ellipse class="bp-foot" cx="61" cy="176" rx="12" ry="9"/>',
-    '    <ellipse class="bp-foot" cx="99" cy="176" rx="12" ry="9"/>',
-    '    <path class="bp-onesie" d="M52 118 Q52 106 64 106 H96 Q108 106 108 118 V154 Q108 176 80 176 Q52 176 52 154 Z"/>',
-    '    <ellipse class="bp-belly" cx="80" cy="146" rx="19" ry="15"/>',
-    '    <path class="bp-arm" d="M53 126 Q42 132 45 144 Q47 151 54 149"/>',
-    '    <path class="bp-arm right" d="M107 126 Q118 132 115 144 Q113 151 106 149"/>',
+    '    <path class="bp-onesie" d="M52 118 Q52 106 64 106 H96 Q108 106 108 118 V154 Q108 174 80 174 Q52 174 52 154 Z"/>',
+    '    <ellipse class="bp-belly" cx="80" cy="147" rx="19" ry="14"/>',
     '    <path class="bp-star" d="M80 132 l3.2 6.6 7.2 1 -5.2 5.1 1.2 7.2 -6.4-3.4 -6.4 3.4 1.2-7.2 -5.2-5.1 7.2-1 z"/>',
     '  </g>',
-    '  <g class="bp-head">',
-    '    <path class="bp-ear" d="M42 50 Q38 22 62 36 Z"/>',
-    '    <path class="bp-ear right" d="M118 50 Q122 22 98 36 Z"/>',
-    '    <path class="bp-ear-in" d="M47 46 Q45 32 57 39 Z"/>',
-    '    <path class="bp-ear-in right" d="M113 46 Q115 32 103 39 Z"/>',
-    '    <circle class="bp-face" cx="80" cy="80" r="46"/>',
-    '    <path class="bp-ahoge" d="M80 35 Q82 20 92 16 Q104 12 100 24"/>',
-    '    <g class="bp-eyes">',
-    '      <ellipse class="bp-eye" cx="63" cy="80" rx="7" ry="9.5"/>',
-    '      <ellipse class="bp-eye" cx="97" cy="80" rx="8" ry="10"/>',
-    '      <circle class="bp-glint" cx="60.5" cy="75.5" r="2.6"/>',
-    '      <circle class="bp-glint" cx="94" cy="75" r="2.8"/>',
+
+    '  <g class="bp-head-tilt">',
+    '    <g class="bp-head">',
+    '      <g class="bp-ear left">',
+    '        <path class="bp-ear-outer" d="M42 52 Q36 23 61 36 Z"/>',
+    '        <path class="bp-ear-inner" d="M47 46 Q45 32 57 39 Z"/>',
+    '      </g>',
+    '      <g class="bp-ear right">',
+    '        <path class="bp-ear-outer" d="M118 52 Q124 23 99 36 Z"/>',
+    '        <path class="bp-ear-inner" d="M113 46 Q115 32 103 39 Z"/>',
+    '      </g>',
+    '      <circle class="bp-face" cx="80" cy="80" r="46"/>',
+    '      <g class="bp-ahoge"><path d="M80 35 Q82 19 92 15 Q104 12 100 24"/></g>',
+
+    '      <g class="bp-eye left">',
+    '        <ellipse class="bp-sclera" cx="63" cy="80" rx="8" ry="10"/>',
+    '        <g class="bp-pupil">',
+    '          <ellipse class="bp-pupil-dark" cx="63" cy="81" rx="5.4" ry="7.8"/>',
+    '          <circle class="bp-glint" cx="61" cy="77" r="2.2"/>',
+    '        </g>',
+    '      </g>',
+    '      <g class="bp-eye right">',
+    '        <ellipse class="bp-sclera" cx="97" cy="80" rx="8.4" ry="10.4"/>',
+    '        <g class="bp-pupil">',
+    '          <ellipse class="bp-pupil-dark" cx="97" cy="81" rx="5.8" ry="8.2"/>',
+    '          <circle class="bp-glint" cx="95" cy="76.5" r="2.3"/>',
+    '        </g>',
+    '      </g>',
+
+    '      <ellipse class="bp-blush" cx="49" cy="96" rx="8.5" ry="4.5"/>',
+    '      <ellipse class="bp-blush" cx="111" cy="96" rx="8.5" ry="4.5"/>',
+    '      <path class="bp-mouth" d="M73 95 Q80 101 87 95"/>',
+    '      <circle class="bp-drool" cx="91" cy="103" r="2.4"/>',
     '    </g>',
-    '    <ellipse class="bp-blush" cx="49" cy="96" rx="9" ry="5"/>',
-    '    <ellipse class="bp-blush" cx="111" cy="96" rx="9" ry="5"/>',
-    '    <path class="bp-mouth" d="M73 95 Q80 102 87 95"/>',
-    '    <circle class="bp-drool" cx="90" cy="104" r="3"/>',
+    '  </g>',
+    '  <g class="bp-arm left">',
+    '    <path class="bp-arm-limb" d="M52 122 Q44 134 46 150"/>',
+    '    <circle class="bp-hand" cx="46" cy="152" r="5"/>',
+    '  </g>',
+    '  <g class="bp-arm right">',
+    '    <path class="bp-arm-limb" d="M108 122 Q116 134 114 150"/>',
+    '    <circle class="bp-hand" cx="114" cy="152" r="5"/>',
     '  </g>',
     '</svg>'
   ].join('');
@@ -107,25 +151,26 @@
     bubble = root.querySelector('.bp-bubble');
     hearts = root.querySelector('.bp-hearts');
 
+    if (isNight()) root.classList.add('is-night');
     restorePos();
     bindDrag();
     bindTap();
+    bindLook();
     startBlink();
+    startIdle();
     startTalking();
     watchNote();
-
-    if (isNight()) root.classList.add('is-night');
 
     setTimeout(function () { if (!state.greeted) greet(); }, 12000);
     setTimeout(function () {
       if (state.pos) return;
       try {
-        if (global.sessionStorage.getItem('catfish-baby-hinted-v1')) return;
-        global.sessionStorage.setItem('catfish-baby-hinted-v1', '1');
+        if (global.sessionStorage.getItem(HINT_KEY)) return;
+        global.sessionStorage.setItem(HINT_KEY, '1');
       } catch (e) { /* 忽略 */ }
       say('可以把我拖走哦', 3400);
     }, 4500);
-    setTimeout(function () { restatePos(); }, 300);
+    setTimeout(restatePos, 300);
     global.addEventListener('resize', restatePos);
   }
 
@@ -134,10 +179,10 @@
 
   function clampPos(left, top) {
     var h = homeRect();
-    var w = root.offsetWidth || 92;
-    var ph = root.offsetHeight || 112;
+    var w = root.offsetWidth || 72;
+    var ph = root.offsetHeight || 86;
     var maxLeft = Math.max(8, h.width - w - 8);
-    var maxTop = Math.max(8, h.height - ph - 74);   /* 别压住底部导航 */
+    var maxTop = Math.max(8, h.height - ph - 74);
     return {
       left: Math.min(Math.max(8, left), maxLeft),
       top: Math.min(Math.max(8, top), maxTop)
@@ -151,20 +196,13 @@
     root.style.bottom = 'auto';
     state.pos = p;
   }
-
-  function restatePos() {
-    if (!state.pos) return;
-    place(state.pos.left, state.pos.top);
-  }
+  function restatePos() { if (state.pos) place(state.pos.left, state.pos.top); }
 
   function restorePos() {
     var saved = null;
     try { saved = JSON.parse(global.localStorage.getItem(POS_KEY) || 'null'); } catch (e) { saved = null; }
-    if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') {
-      place(saved.left, saved.top);
-    }
+    if (saved && typeof saved.left === 'number' && typeof saved.top === 'number') place(saved.left, saved.top);
   }
-
   function savePos() {
     try { global.localStorage.setItem(POS_KEY, JSON.stringify(state.pos)); } catch (e) { /* 忽略 */ }
   }
@@ -186,6 +224,7 @@
       };
       state.moved = false;
       root.classList.add('is-hold');
+      clearMicro();
       try { root.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
     });
 
@@ -228,7 +267,7 @@
     });
   }
 
-  /* ---------------- 点击 ---------------- */
+  /* ---------------- 点击 / 动作 ---------------- */
   function bindTap() {
     root.addEventListener('click', function (e) {
       e.preventDefault();
@@ -241,34 +280,104 @@
 
   function tap() {
     var now = Date.now();
-    if (now - state.lastActionAt < 900) return;
+    if (now - state.lastActionAt < 700) return;
     state.lastActionAt = now;
-    /* 注意力：被逗一次就少一点，逗得越勤越安静 */
-    state.attention = Math.max(0, state.attention - 0.45);
+    state.lastInteractAt = now;
 
-    /* 呆的关键不是动作，是慢半拍：先愣一下再动 */
-    var delay = 110 + Math.random() * 130;
-    setTimeout(function () {
-      if (state.drag) return;
-      state.lastInteractAt = Date.now();
-      var action = ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
-      play(action);
-      /* 一次只给一到两种反馈，不同时把动作、台词、粒子全放出来 */
-      var spoke = false;
-      if (Math.random() < 0.45) { say(pick(LINES.tap), 1900); spoke = true; }
-      if (!spoke) {
-        if (Math.random() < 0.5) burst('heart', 2);
-        else burst('spark', 1);
-      }
-      if (isNight()) root.classList.add('is-night');
-    }, delay);
+    var pool = ACTIONS.filter(function (a) { return a !== state.lastAction; });
+    var action = pool[Math.floor(Math.random() * pool.length)];
+    state.lastAction = action;
+    play(action);
+    if (Math.random() < 0.72) say(pick(LINES.tap), 1900);
+    if (Math.random() < 0.4) burst('heart', 3);
+    else burst('spark', 2);
   }
 
   function play(action) {
+    clearMicro();
     ACTIONS.forEach(function (name) { root.classList.remove(name); });
     void root.offsetWidth;
     root.classList.add(action);
-    setTimeout(function () { root.classList.remove(action); }, 900);
+    state.actionUntil = Date.now() + 1250;
+    setTimeout(function () {
+      root.classList.remove(action);
+      state.actionUntil = Date.now() + 300;
+    }, 1200);
+  }
+
+  /* ---------------- 待机小动作 ---------------- */
+  function clearMicro() {
+    ['is-ear-twitch', 'is-tilt', 'is-foot-tap', 'is-arm-sway'].forEach(function (name) {
+      root.classList.remove(name);
+    });
+  }
+
+  function startIdle() {
+    function loop() {
+      state.idleTimer = setTimeout(function () {
+        if (canIdle()) micro();
+        loop();
+      }, rand(2400, 5200));
+    }
+    loop();
+  }
+
+  function canIdle() {
+    if (document.hidden || state.drag) return false;
+    if (!phaseIsSpace()) return false;
+    if (document.body.classList.contains('memories-open')) return false;
+    var panel = document.getElementById('bubuFeaturePanel');
+    if (panel && !panel.hidden) return false;
+    if (Date.now() < state.actionUntil) return false;
+    return true;
+  }
+
+  function micro() {
+    var roll = Math.random();
+    if (roll < 0.30) twitch('is-ear-twitch', 420);
+    else if (roll < 0.55) glance();
+    else if (roll < 0.72) twitch('is-tilt', 900);
+    else if (roll < 0.86) twitch('is-foot-tap', 520);
+    else if (roll < 0.95) twitch('is-arm-sway', 720);
+    else if (roll < 0.98) play('is-yawn');
+    else play('is-hiccup');
+  }
+
+  function twitch(name, ms) {
+    clearMicro();
+    root.classList.add(name);
+    setTimeout(function () { root.classList.remove(name); }, ms);
+  }
+
+  function glance() {
+    var dx = (Math.random() < 0.5 ? -1 : 1) * rand(1.2, 2.4);
+    setLook(dx, rand(-1, 1.2), dx * 1.4);
+    setTimeout(function () { setLook(0, 0, 0); }, 900);
+  }
+
+  /* ---------------- 视线跟随 ---------------- */
+  function setLook(x, y, turn) {
+    root.style.setProperty('--look-x', x.toFixed(2) + 'px');
+    root.style.setProperty('--look-y', y.toFixed(2) + 'px');
+    root.style.setProperty('--head-turn', turn.toFixed(2) + 'deg');
+  }
+
+  function bindLook() {
+    if (!global.addEventListener) return;
+    spaceHome.addEventListener('pointermove', function (e) {
+      if (state.drag || !phaseIsSpace()) return;
+      if (state.lookFrame) return;
+      state.lookFrame = global.requestAnimationFrame(function () {
+        state.lookFrame = 0;
+        var r = root.getBoundingClientRect();
+        var cx = r.left + r.width / 2;
+        var cy = r.top + r.height * 0.45;
+        var dx = Math.max(-1.6, Math.min(1.6, (e.clientX - cx) / 160));
+        var dy = Math.max(-1.4, Math.min(1.4, (e.clientY - cy) / 160));
+        setLook(dx * 1.6, dy * 1.4, dx * 5);
+      });
+    }, { passive: true });
+    spaceHome.addEventListener('pointerleave', function () { setLook(0, 0, 0); });
   }
 
   /* ---------------- 说话 ---------------- */
@@ -276,6 +385,9 @@
     if (!text || !bubble) return;
     bubble.textContent = text;
     bubble.classList.add('is-on');
+    root.classList.add('is-talk');
+    clearTimeout(state.talkTimer);
+    state.talkTimer = setTimeout(function () { root.classList.remove('is-talk'); }, 620);
     clearTimeout(state.bubbleTimer);
     state.bubbleTimer = setTimeout(function () {
       bubble.classList.remove('is-on');
@@ -298,7 +410,6 @@
     if (h >= 5 && h < 10) pool = LINES.morning;
     else if (h >= 22 || h < 5) pool = LINES.night;
 
-    /* 偶尔提一句陪了多少天，让「养成」有点存在感 */
     if (Math.random() < 0.22 && global.SpaceApp && SpaceApp.daysSince) {
       var days = 0;
       try { days = SpaceApp.daysSince(); } catch (e) { days = 0; }
@@ -309,8 +420,7 @@
 
   function canSpeak() {
     if (document.hidden) return false;
-    var app = document.getElementById('app');
-    if (app && app.dataset.phase !== 'space') return false;
+    if (!phaseIsSpace()) return false;
     if (document.body.classList.contains('memories-open')) return false;
     var panel = document.getElementById('bubuFeaturePanel');
     if (panel && !panel.hidden) return false;
@@ -320,17 +430,16 @@
   }
 
   function startTalking() {
-    state.nextTalkAt = Date.now() + 90000;
+    state.nextTalkAt = Date.now() + rand(100000, 180000);
     state.talkTimer = setInterval(function () {
-      /* 安静的时候注意力慢慢回满；回满了才可能自言自语 */
-      state.attention = Math.min(1, state.attention + 0.06);
-      if (state.attention < 0.9) return;
       if (Date.now() < state.nextTalkAt) return;
-      if (!canSpeak()) { state.nextTalkAt = Date.now() + 15000; return; }
+      if (!canSpeak()) {
+        state.nextTalkAt = Date.now() + 20000;
+        return;
+      }
       say(randomLine(), 3600);
       burst('heart', 1);
-      state.attention = Math.max(0, state.attention - 0.6);
-      state.nextTalkAt = Date.now() + 45000;
+      state.nextTalkAt = Date.now() + rand(120000, 260000);
     }, 10000);
   }
 
@@ -338,15 +447,17 @@
   function startBlink() {
     function schedule() {
       state.blinkTimer = setTimeout(function () {
-        root.classList.add('is-blink');
-        setTimeout(function () { root.classList.remove('is-blink'); }, 130);
+        if (!document.hidden && phaseIsSpace()) {
+          root.classList.add('is-blink');
+          setTimeout(function () { root.classList.remove('is-blink'); }, 120);
+        }
         schedule();
       }, rand(3200, 6800));
     }
     schedule();
   }
 
-  /* ---------------- 小爱心 / 星星 ---------------- */
+  /* ---------------- 爱心 / 星星 ---------------- */
   function burst(kind, count) {
     if (!hearts) return;
     for (var i = 0; i < count; i += 1) {

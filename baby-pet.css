@@ -1,118 +1,501 @@
 ﻿/* ============================================================
-   小团子 · 样式
-   原创 SVG，不依赖图片；所有动画都在这里
+   小团子 · 样式与分部件动画
+   每个部位单独 transform-origin，动作靠各部位配合完成
    ============================================================ */
 
 .baby-pet{
   position:absolute;z-index:9;
   left:max(4px,calc((100% - 520px)/2 - 40px));
-  bottom:calc(env(safe-area-inset-bottom) + 150px);
-  width:72px;height:86px;padding:0;border:0;background:none;
+  bottom:calc(env(safe-area-inset-bottom) + 146px);
+  width:84px;height:100px;padding:0;border:0;background:none;
   cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
   -webkit-tap-highlight-color:transparent;
   filter:drop-shadow(0 10px 12px rgba(62,110,126,.16));
   transform-origin:50% 88%;
   transition:bottom .32s cubic-bezier(.2,.9,.3,1),opacity .3s ease;
 }
-.baby-pet:focus-visible{outline:3px solid rgba(239,154,178,.5);outline-offset:4px;border-radius:22px;}
+.baby-pet:focus-visible{outline:3px solid rgba(239,154,178,.5);outline-offset:4px;border-radius:20px;}
 .baby-pet.has-note{bottom:calc(env(safe-area-inset-bottom) + 208px);}
 .stage:not([data-phase="space"]) .baby-pet{opacity:0;pointer-events:none;}
 
 .baby-pet svg{display:block;width:100%;height:100%;overflow:visible;}
 
 /* ---------- 配色 ---------- */
-.bp-face,.bp-ear,.bp-foot{fill:#fff3e6;stroke:#ecd0bd;stroke-width:1.2;}
-.bp-ear-in{fill:#ffc9d4;opacity:.9;}
+.bp-face,.bp-ear-outer,.bp-foot,.bp-hand{fill:#fff3e6;stroke:#ecd0bd;stroke-width:1.2;}
+.bp-ear-inner{fill:#ffc9d4;opacity:.9;}
 .bp-onesie{fill:#bfe6f7;stroke:#a9d8ee;stroke-width:1.2;}
+.bp-limb{fill:#bfe6f7;}
 .bp-belly{fill:#eaf9ff;opacity:.9;}
-.bp-arm{fill:#bfe6f7;stroke:#a9d8ee;stroke-width:1.2;}
 .bp-star{fill:#ffd59a;}
-.bp-eye{fill:#3f5b66;}
+.bp-arm-limb{fill:none;stroke:#bfe6f7;stroke-width:11;stroke-linecap:round;}
+.bp-sclera{fill:#fffdf8;stroke:#e6c9b6;stroke-width:.9;}
+.bp-pupil-dark{fill:#3f5b66;}
 .bp-glint{fill:#fff;}
 .bp-blush{fill:#ffc2d1;opacity:.85;}
-.bp-mouth{fill:none;stroke:#b96f7e;stroke-width:2.6;stroke-linecap:round;}
-.bp-ahoge{fill:none;stroke:#e5c4ad;stroke-width:4;stroke-linecap:round;}
+.bp-mouth{fill:none;stroke:#b96f7e;stroke-width:2.6;stroke-linecap:round;transform-box:fill-box;transform-origin:50% 50%;}
+.bp-ahoge path{fill:none;stroke:#e5c4ad;stroke-width:4;stroke-linecap:round;}
 .bp-drool{fill:#d8f3ff;opacity:0;}
 .bp-shadow{fill:rgba(62,110,126,.16);}
 
-/* ---------- 待机 ---------- */
-.bp-head{transform-origin:80px 96px;animation:bpBob 4.6s ease-in-out infinite;}
-.bp-body{transform-origin:80px 176px;animation:bpBreath 4.6s ease-in-out infinite;}
-.bp-ahoge{transform-origin:80px 34px;animation:bpAhoge 3.4s ease-in-out infinite;}
-.bp-drool{animation:bpDrool 11s ease-in-out infinite;}
-.bp-eyes{transform-origin:80px 80px;transition:transform .1s ease;}
-.baby-pet.is-blink .bp-eyes{transform:scaleY(.12);}
-.baby-pet.is-night .bp-eyes{transform:scaleY(.6);}
-.baby-pet.is-night .bp-head{animation-duration:6.4s;}
-.baby-pet.is-night .bp-body{animation-duration:6.4s;}
+/* ---------- 各部位的转轴 ---------- */
+.bp-leg{transform-box:fill-box;transform-origin:50% 6%;}
+.bp-body{transform-box:fill-box;transform-origin:50% 100%;}
+.bp-arm{transform-box:fill-box;transform-origin:50% 4%;}
+.bp-head{transform-box:fill-box;transform-origin:50% 100%;}
+.bp-head-tilt{transform-box:fill-box;transform-origin:50% 100%;}
+.bp-ear{transform-box:fill-box;transform-origin:50% 100%;}
+.bp-ahoge{transform-box:fill-box;transform-origin:50% 100%;}
+.bp-eye{transform-box:fill-box;transform-origin:50% 50%;}
+.bp-hand{fill:#ffe9da;stroke:#e0b9a2;}\n.bp-pupil{transform-box:fill-box;transform-origin:50% 50%;transform:translate(var(--look-x,0px),var(--look-y,0px));transition:transform .24s ease;}
 
-@keyframes bpBob{
-  0%,100%{transform:translateY(0) rotate(-.6deg);}
-  50%{transform:translateY(-2.2px) rotate(.8deg);}
+/* ---------- 待机 ---------- */
+.bp-head{animation:bpIdleHead 4.8s ease-in-out infinite;}
+.bp-body{animation:bpIdleBody 4.8s ease-in-out infinite;}
+.bp-arm.left{animation:bpIdleArmL 5.6s ease-in-out infinite;}
+.bp-arm.right{animation:bpIdleArmR 5.6s ease-in-out infinite;}
+.bp-ear.left{animation:bpIdleEarL 6.4s ease-in-out infinite;}
+.bp-ear.right{animation:bpIdleEarR 6.9s ease-in-out infinite;}
+.bp-ahoge{animation:bpIdleAhoge 3.6s ease-in-out infinite;}
+.bp-drool{animation:bpDrool 12s ease-in-out infinite;}
+.bp-head-tilt{transform:rotate(var(--head-turn,0deg));transition:transform .25s ease;}
+.bp-eye{transition:transform .1s ease;}
+.baby-pet.is-blink .bp-eye{transform:scaleY(.1);}
+.baby-pet.is-night .bp-eye{transform:scaleY(.58);}
+.baby-pet.is-night .bp-head{animation-duration:6.6s;}
+.baby-pet.is-night .bp-body{animation-duration:6.6s;}
+
+@keyframes bpIdleHead{
+  0%,100%{transform:translateY(0) rotate(-.7deg);}
+  50%{transform:translateY(-1.8px) rotate(.9deg);}
 }
-@keyframes bpBreath{
+@keyframes bpIdleBody{
   0%,100%{transform:scaleY(1);}
-  50%{transform:scaleY(1.02);}
+  50%{transform:scaleY(1.018);}
 }
-@keyframes bpAhoge{
-  0%,100%{transform:rotate(-5deg);}
-  50%{transform:rotate(6deg);}
+@keyframes bpIdleArmL{
+  0%,100%{transform:rotate(0);}
+  50%{transform:rotate(3.5deg);}
+}
+@keyframes bpIdleArmR{
+  0%,100%{transform:rotate(0);}
+  50%{transform:rotate(-3.5deg);}
+}
+@keyframes bpIdleEarL{
+  0%,100%{transform:rotate(0);}
+  45%{transform:rotate(-2.2deg);}
+}
+@keyframes bpIdleEarR{
+  0%,100%{transform:rotate(0);}
+  55%{transform:rotate(2.2deg);}
+}
+@keyframes bpIdleAhoge{
+  0%,100%{transform:rotate(-6deg);}
+  50%{transform:rotate(7deg);}
 }
 @keyframes bpDrool{
   0%,86%,100%{opacity:0;transform:translateY(0);}
   90%,94%{opacity:.95;transform:translateY(2px);}
 }
 
-/* ---------- 点击动作 ---------- */
+/* ---------- 拖动 ---------- */
 .baby-pet.is-hold{transform:scale(.97);}
 .baby-pet.is-dragging{
   cursor:grabbing;transform:scale(1.05) rotate(var(--bp-tilt,0deg));
   transition:none;filter:drop-shadow(0 16px 16px rgba(62,110,126,.2));
 }
-.baby-pet.is-jump{animation:bpJump .82s cubic-bezier(.2,.8,.3,1);}
-.baby-pet.is-spin{animation:bpSpin .9s cubic-bezier(.3,.7,.3,1);}
-.baby-pet.is-wiggle{animation:bpWiggle .8s ease-in-out;}
-.baby-pet.is-yawn{animation:bpYawn 1s ease-in-out;}
-.baby-pet.is-jump .bp-head,
-.baby-pet.is-spin .bp-head,
-.baby-pet.is-wiggle .bp-head,
-.baby-pet.is-yawn .bp-head{animation-play-state:paused;}
+.baby-pet.is-dragging *{animation-play-state:paused;}
+
+/* ============================================================
+   动作 1：挥手
+   ============================================================ */
+.is-wave .bp-arm.right{animation:bpWaveArm .95s ease-in-out;}
+.is-wave .bp-head{animation:bpWaveHead 1.1s ease-in-out;}
+.is-wave .bp-ear.right{animation:bpPerk .8s ease-in-out;}
+.is-wave .bp-mouth{animation:bpSmile .9s ease-in-out;}
+
+@keyframes bpWaveArm{
+  0%{transform:rotate(0);}
+  18%{transform:rotate(-142deg);}
+  36%{transform:rotate(-110deg);}
+  54%{transform:rotate(-142deg);}
+  72%{transform:rotate(-116deg);}
+  100%{transform:rotate(0);}
+}
+@keyframes bpWaveHead{
+  0%,100%{transform:rotate(0);}
+  35%{transform:rotate(5deg) translateY(-1px);}
+  70%{transform:rotate(3deg);}
+}
+@keyframes bpPerk{
+  0%,100%{transform:rotate(0);}
+  30%{transform:rotate(9deg);}
+  60%{transform:rotate(4deg);}
+}
+@keyframes bpSmile{
+  0%,100%{transform:scale(1);}
+  40%{transform:scale(1.18,.9);}
+}
+
+/* ============================================================
+   动作 2：跳舞
+   ============================================================ */
+.is-dance .bp-body{animation:bpDanceBody 1.2s ease-in-out;}
+.is-dance .bp-head{animation:bpDanceHead 1.2s ease-in-out;}
+.is-dance .bp-arm.left{animation:bpDanceArmL 1.2s ease-in-out;}
+.is-dance .bp-arm.right{animation:bpDanceArmR 1.2s ease-in-out;}
+.is-dance .bp-leg.left{animation:bpDanceLegL 1.2s ease-in-out;}
+.is-dance .bp-leg.right{animation:bpDanceLegR 1.2s ease-in-out;}
+
+@keyframes bpDanceBody{
+  0%,100%{transform:rotate(0);}
+  25%{transform:rotate(6deg);}
+  55%{transform:rotate(-6deg);}
+  80%{transform:rotate(3deg);}
+}
+@keyframes bpDanceHead{
+  0%,100%{transform:rotate(0) translateY(0);}
+  25%{transform:rotate(-5deg) translateY(-1px);}
+  55%{transform:rotate(5deg) translateY(-1px);}
+}
+@keyframes bpDanceArmL{
+  0%,100%{transform:rotate(0);}
+  25%{transform:rotate(128deg);}
+  55%{transform:rotate(16deg);}
+  80%{transform:rotate(96deg);}
+}
+@keyframes bpDanceArmR{
+  0%,100%{transform:rotate(0);}
+  25%{transform:rotate(-16deg);}
+  55%{transform:rotate(-128deg);}
+  80%{transform:rotate(-96deg);}
+}
+@keyframes bpDanceLegL{
+  0%,100%{transform:rotate(0);}
+  25%{transform:rotate(-9deg);}
+  55%{transform:rotate(5deg);}
+}
+@keyframes bpDanceLegR{
+  0%,100%{transform:rotate(0);}
+  25%{transform:rotate(5deg);}
+  55%{transform:rotate(-9deg);}
+}
+
+/* ============================================================
+   动作 3：跳
+   ============================================================ */
+.baby-pet.is-jump{animation:bpJump .95s cubic-bezier(.2,.8,.3,1);}
+.is-jump .bp-leg.left{animation:bpJumpLegL .95s ease-out;}
+.is-jump .bp-leg.right{animation:bpJumpLegR .95s ease-out;}
+.is-jump .bp-arm.left{animation:bpJumpArmL .95s ease-out;}
+.is-jump .bp-arm.right{animation:bpJumpArmR .95s ease-out;}
+.is-jump .bp-head{animation:bpJumpHead .95s ease-out;}
+.is-jump .bp-ear.left{animation:bpFlapL .95s ease-out;}
+.is-jump .bp-ear.right{animation:bpFlapR .95s ease-out;}
 
 @keyframes bpJump{
   0%{transform:translateY(0) scale(1);}
-  18%{transform:translateY(2px) scale(1.04,.94);}
-  45%{transform:translateY(-30px) scale(.98,1.04);}
-  72%{transform:translateY(1px) scale(1.05,.95);}
-  86%{transform:translateY(-6px) scale(1);}
+  16%{transform:translateY(1px) scale(1.05,.93);}
+  45%{transform:translateY(-30px) scale(.97,1.05);}
+  70%{transform:translateY(0) scale(1.05,.94);}
+  84%{transform:translateY(-5px) scale(1);}
   100%{transform:translateY(0) scale(1);}
 }
+@keyframes bpJumpLegL{
+  0%,100%{transform:rotate(0) translateY(0);}
+  16%{transform:rotate(12deg) translateY(3px);}
+  45%{transform:rotate(-16deg) translateY(-5px);}
+  75%{transform:rotate(6deg) translateY(2px);}
+}
+@keyframes bpJumpLegR{
+  0%,100%{transform:rotate(0) translateY(0);}
+  16%{transform:rotate(-12deg) translateY(3px);}
+  45%{transform:rotate(16deg) translateY(-5px);}
+  75%{transform:rotate(-6deg) translateY(2px);}
+}
+@keyframes bpJumpArmL{
+  0%,100%{transform:rotate(0);}
+  30%{transform:rotate(-148deg);}
+  60%{transform:rotate(-118deg);}
+  85%{transform:rotate(-30deg);}
+}
+@keyframes bpJumpArmR{
+  0%,100%{transform:rotate(0);}
+  30%{transform:rotate(148deg);}
+  60%{transform:rotate(118deg);}
+  85%{transform:rotate(30deg);}
+}
+@keyframes bpJumpHead{
+  0%,100%{transform:translateY(0) scale(1);}
+  16%{transform:translateY(2px) scale(1.06,.94);}
+  45%{transform:translateY(-3px) scale(.96,1.04);}
+  72%{transform:translateY(2px) scale(1.05,.95);}
+}
+@keyframes bpFlapL{
+  0%,100%{transform:rotate(0);}
+  35%{transform:rotate(-16deg);}
+  65%{transform:rotate(8deg);}
+}
+@keyframes bpFlapR{
+  0%,100%{transform:rotate(0);}
+  35%{transform:rotate(16deg);}
+  65%{transform:rotate(-8deg);}
+}
+
+/* ============================================================
+   动作 4：转圈
+   ============================================================ */
+.baby-pet.is-spin{animation:bpSpin .95s cubic-bezier(.3,.7,.3,1);}
+.is-spin .bp-arm.left{animation:bpSpinArmL .95s ease-in-out;}
+.is-spin .bp-arm.right{animation:bpSpinArmR .95s ease-in-out;}
+.is-spin .bp-ear.left{animation:bpSpinEarL .95s ease-in-out;}
+.is-spin .bp-ear.right{animation:bpSpinEarR .95s ease-in-out;}
+
 @keyframes bpSpin{
   0%{transform:rotate(0) scale(1);}
-  35%{transform:rotate(150deg) scale(1.06);}
-  70%{transform:rotate(300deg) scale(.98);}
+  40%{transform:rotate(170deg) scale(1.05);}
+  75%{transform:rotate(310deg) scale(.98);}
   100%{transform:rotate(360deg) scale(1);}
 }
-@keyframes bpWiggle{
+@keyframes bpSpinArmL{
   0%,100%{transform:rotate(0);}
-  20%{transform:rotate(-8deg);}
-  45%{transform:rotate(7deg);}
-  70%{transform:rotate(-4deg);}
+  40%{transform:rotate(-92deg);}
+  75%{transform:rotate(-70deg);}
 }
-@keyframes bpYawn{
-  0%,100%{transform:translateY(0) scale(1);}
-  30%{transform:translateY(-4px) scale(1.05,.96);}
-  60%{transform:translateY(-2px) scale(1.02,.98);}
+@keyframes bpSpinArmR{
+  0%,100%{transform:rotate(0);}
+  40%{transform:rotate(92deg);}
+  75%{transform:rotate(70deg);}
 }
-.baby-pet.is-yawn .bp-mouth{transform-origin:80px 95px;animation:bpMouthOpen .9s ease-in-out;}
-.baby-pet.is-yawn .bp-eyes{transform:scaleY(.16);}
-@keyframes bpMouthOpen{
+@keyframes bpSpinEarL{
+  0%,100%{transform:rotate(0);}
+  40%{transform:rotate(-14deg);}
+  75%{transform:rotate(10deg);}
+}
+@keyframes bpSpinEarR{
+  0%,100%{transform:rotate(0);}
+  40%{transform:rotate(14deg);}
+  75%{transform:rotate(-10deg);}
+}
+
+/* ============================================================
+   动作 5：打哈欠
+   ============================================================ */
+.is-yawn .bp-head{animation:bpYawnHead 1.25s ease-in-out;}
+.is-yawn .bp-eye{animation:bpYawnEye 1.25s ease-in-out;}
+.is-yawn .bp-mouth{animation:bpYawnMouth 1.25s ease-in-out;}
+.is-yawn .bp-arm.left{animation:bpStretchL 1.25s ease-in-out;}
+.is-yawn .bp-arm.right{animation:bpStretchR 1.25s ease-in-out;}
+.is-yawn .bp-body{animation:bpYawnBody 1.25s ease-in-out;}
+
+@keyframes bpYawnHead{
+  0%,100%{transform:rotate(0);}
+  35%{transform:rotate(-7deg) translateY(-2px);}
+  65%{transform:rotate(-5deg) translateY(-1px);}
+}
+@keyframes bpYawnEye{
   0%,100%{transform:scaleY(1);}
-  45%{transform:scaleY(2.4);}
+  25%,70%{transform:scaleY(.08);}
+}
+@keyframes bpYawnMouth{
+  0%,100%{transform:scale(1,1);}
+  30%,60%{transform:scale(1.05,2.7);}
+}
+@keyframes bpStretchL{
+  0%,100%{transform:rotate(0);}
+  35%,65%{transform:rotate(-152deg);}
+}
+@keyframes bpStretchR{
+  0%,100%{transform:rotate(0);}
+  35%,65%{transform:rotate(152deg);}
+}
+@keyframes bpYawnBody{
+  0%,100%{transform:scaleY(1);}
+  40%{transform:scaleY(1.04);}
+}
+
+/* ============================================================
+   动作 6：害羞
+   ============================================================ */
+.is-shy .bp-head{animation:bpShyHead 1.2s ease-in-out;}
+.is-shy .bp-arm.left{animation:bpShyArmL 1.2s ease-in-out;}
+.is-shy .bp-arm.right{animation:bpShyArmR 1.2s ease-in-out;}
+.is-shy .bp-blush{animation:bpBlush 1.2s ease-in-out;}
+.is-shy .bp-hand{fill:#ffe9da;stroke:#e0b9a2;}\n.bp-pupil{animation:bpLookDown 1.2s ease-in-out;}
+
+@keyframes bpShyHead{
+  0%,100%{transform:rotate(0) translateY(0);}
+  40%,70%{transform:rotate(-6deg) translateY(3px);}
+}
+@keyframes bpShyArmL{
+  0%,100%{transform:rotate(0);}
+  35%,75%{transform:translate(10px,-18px) rotate(-52deg);}
+}
+@keyframes bpShyArmR{
+  0%,100%{transform:rotate(0);}
+  35%,75%{transform:translate(-10px,-18px) rotate(52deg);}
+}
+@keyframes bpBlush{
+  0%,100%{transform:scale(1);opacity:.85;}
+  40%,70%{transform:scale(1.45);opacity:1;}
+}
+@keyframes bpLookDown{
+  0%,100%{transform:translate(0,0);}
+  40%,70%{transform:translate(0,2px);}
+}
+
+/* 动作 7：点头 */
+.is-nod .bp-head{animation:bpNod .95s ease-in-out;}
+.is-nod .bp-body{animation:bpNodBody .95s ease-in-out;}
+.is-nod .bp-ear.left{animation:bpNodEarL .95s ease-in-out;}
+.is-nod .bp-ear.right{animation:bpNodEarR .95s ease-in-out;}
+
+@keyframes bpNod{
+  0%,100%{transform:translateY(0) rotate(0);}
+  30%{transform:translateY(4px) rotate(2deg);}
+  62%{transform:translateY(-2px) rotate(-1deg);}
+}
+@keyframes bpNodBody{
+  0%,100%{transform:scaleY(1);}
+  30%{transform:scaleY(.98);}
+  65%{transform:scaleY(1.015);}
+}
+@keyframes bpNodEarL{
+  0%,100%{transform:rotate(0);}
+  30%{transform:rotate(-6deg);}
+  65%{transform:rotate(4deg);}
+}
+@keyframes bpNodEarR{
+  0%,100%{transform:rotate(0);}
+  30%{transform:rotate(6deg);}
+  65%{transform:rotate(-4deg);}
+}
+
+/* ============================================================
+   动作 8：捂眼睛再偷看（保留样式，当前动作池未启用）
+   ============================================================ */
+.is-peek .bp-arm.left{animation:bpPeekArmL 1.45s ease-in-out;}
+.is-peek .bp-arm.right{animation:bpPeekArmR 1.45s ease-in-out;}
+.is-peek .bp-head{animation:bpPeekHead 1.45s ease-in-out;}
+.is-peek .bp-eye{animation:bpPeekEye 1.45s ease-in-out;}
+
+@keyframes bpPeekArmL{
+  0%,100%{transform:rotate(0);}
+  22%,80%{transform:translate(22px,-30px) rotate(-128deg);}
+}
+@keyframes bpPeekArmR{
+  0%,100%{transform:rotate(0);}
+  22%,55%{transform:translate(-22px,-30px) rotate(128deg);}
+  72%,80%{transform:translate(-10px,-20px) rotate(100deg);}
+}
+@keyframes bpPeekHead{
+  0%,100%{transform:rotate(0);}
+  30%,75%{transform:rotate(4deg);}
+}
+@keyframes bpPeekEye{
+  0%,20%{transform:scaleY(1);}
+  26%,52%{transform:scaleY(.1);}
+  60%,100%{transform:scaleY(1);}
+}
+
+/* ============================================================
+   动作 8：踢腿
+   ============================================================ */
+.is-kick .bp-leg.left{animation:bpKickL 1.05s ease-in-out;}
+.is-kick .bp-leg.right{animation:bpKickR 1.05s ease-in-out;}
+.is-kick .bp-body{animation:bpKickBody 1.05s ease-in-out;}
+.is-kick .bp-arm.left{animation:bpKickArmL 1.05s ease-in-out;}
+.is-kick .bp-arm.right{animation:bpKickArmR 1.05s ease-in-out;}
+
+@keyframes bpKickL{
+  0%,100%{transform:rotate(0);}
+  25%{transform:rotate(-26deg);}
+  50%{transform:rotate(4deg);}
+  75%{transform:rotate(-18deg);}
+}
+@keyframes bpKickR{
+  0%,100%{transform:rotate(0);}
+  25%{transform:rotate(4deg);}
+  50%{transform:rotate(26deg);}
+  75%{transform:rotate(18deg);}
+}
+@keyframes bpKickBody{
+  0%,100%{transform:rotate(0);}
+  30%{transform:rotate(-3deg);}
+  65%{transform:rotate(3deg);}
+}
+@keyframes bpKickArmL{
+  0%,100%{transform:rotate(0);}
+  40%{transform:rotate(-30deg);}
+}
+@keyframes bpKickArmR{
+  0%,100%{transform:rotate(0);}
+  40%{transform:rotate(30deg);}
+}
+
+/* ============================================================
+   动作 9：打嗝
+   ============================================================ */
+.baby-pet.is-hiccup{animation:bpHiccup .62s ease-out;}
+.is-hiccup .bp-head{animation:bpHiccupHead .62s ease-out;}
+.is-hiccup .bp-ear.left{animation:bpFlapL .62s ease-out;}
+.is-hiccup .bp-ear.right{animation:bpFlapR .62s ease-out;}
+.is-hiccup .bp-mouth{animation:bpHiccupMouth .62s ease-out;}
+
+@keyframes bpHiccup{
+  0%,100%{transform:translateY(0) scale(1);}
+  28%{transform:translateY(-5px) scale(1.04,.97);}
+  55%{transform:translateY(0) scale(1.02,.98);}
+}
+@keyframes bpHiccupHead{
+  0%,100%{transform:translateY(0);}
+  28%{transform:translateY(-4px) scale(1.04);}
+}
+@keyframes bpHiccupMouth{
+  0%,100%{transform:scale(1);}
+  30%{transform:scale(1.1,1.9);}
+}
+
+/* ============================================================
+   待机小动作（随机触发）
+   ============================================================ */
+.is-ear-twitch .bp-ear.right{animation:bpTwitch .42s ease-in-out;}
+.is-tilt .bp-head-tilt{animation:bpTilt .9s ease-in-out;}
+.is-foot-tap .bp-leg.left{animation:bpFootTap .5s ease-in-out;}
+.is-arm-sway .bp-arm.left{animation:bpSwayL .7s ease-in-out;}
+.is-arm-sway .bp-arm.right{animation:bpSwayR .7s ease-in-out;}
+
+@keyframes bpTwitch{
+  0%,100%{transform:rotate(0);}
+  30%{transform:rotate(13deg);}
+  60%{transform:rotate(-4deg);}
+}
+@keyframes bpTilt{
+  0%,100%{transform:rotate(0);}
+  35%,70%{transform:rotate(6deg);}
+}
+@keyframes bpFootTap{
+  0%,100%{transform:rotate(0);}
+  35%,75%{transform:rotate(-13deg);}
+}
+@keyframes bpSwayL{
+  0%,100%{transform:rotate(0);}
+  40%{transform:rotate(-14deg);}
+}
+@keyframes bpSwayR{
+  0%,100%{transform:rotate(0);}
+  40%{transform:rotate(14deg);}
+}
+
+/* 说话时嘴动 */
+.baby-pet.is-talk .bp-mouth{animation:bpTalk .18s ease-in-out 3;}
+@keyframes bpTalk{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.06,1.6);}
 }
 
 /* ---------- 对话气泡 ---------- */
-.bp-bubble{z-index:2;
-  position:absolute;left:50%;bottom:calc(100% + 8px);
+.bp-bubble{
+  position:absolute;left:50%;bottom:calc(100% + 8px);z-index:2;
   transform:translate(-50%,6px) scale(.92);
   min-width:52px;max-width:172px;padding:7px 11px;
   border-radius:14px;border:1px solid rgba(255,255,255,.95);
@@ -147,8 +530,8 @@
 }
 
 @media (max-width:380px){
-  .baby-pet{width:82px;height:100px;}
-  .bp-bubble{z-index:2;font-size:10.5px;max-width:150px;}
+  .baby-pet{width:76px;height:91px;}
+  .bp-bubble{font-size:10.5px;max-width:150px;}
 }
 
 @media (prefers-reduced-motion:reduce){
